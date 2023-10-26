@@ -45,3 +45,11 @@ function getFileData(content) {
 
 // visualization in many criteria optimization
 // dizer que tem 50 sobrelotações, mostrar ao passar com o rato por cima
+
+const dropArea = document.querySelector('.drag-files')
+dropArea.addEventListener('dragover', ()=>{
+    dropArea.classList.add('dragover')
+})
+dropArea.addEventListener('dragleave', ()=>{
+    dropArea.classList.remove('dragover')
+})
