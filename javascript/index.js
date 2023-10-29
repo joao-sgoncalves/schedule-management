@@ -2,17 +2,36 @@
 const fieldSeparator = ';';
 const lineSeparator = '\r\n';
 
-const roomsInput = document.getElementById("rooms-input");
+let schedule = [];
+let classrooms = [];
 
-roomsInput.addEventListener("change", handleFileChange, false);
+const scheduleInput = document.getElementById("schedule-input");
+const classroomsInput = document.getElementById("classrooms-input");
 
-function handleFileChange(input) {
+scheduleInput.addEventListener("change", handleScheduleFileChange, false);
+classroomsInput.addEventListener("change", handleClassroomsFileChange, false);
+
+function handleScheduleFileChange(input) {
   const file = input.target.files[0];
   const reader = new FileReader();
 
   reader.onload = (event) => {
     const result = event.target.result;
-    const classrooms = getFileData(result);
+    schedule = getFileData(result);
+
+    console.log(schedule);
+  };
+
+  reader.readAsText(file);
+}
+
+function handleClassroomsFileChange(input) {
+  const file = input.target.files[0];
+  const reader = new FileReader();
+
+  reader.onload = (event) => {
+    const result = event.target.result;
+    classrooms = getFileData(result);
 
     console.log(classrooms);
   };
