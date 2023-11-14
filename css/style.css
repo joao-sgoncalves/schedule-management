@@ -2,7 +2,7 @@ h1 {
   color: red;
 }
 
-*{
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -207,4 +207,8 @@ progress::-webkit-progress-value{
 .button-section button::after{
   color:#794Fed;
   background: #F3F0FF;
+}
+
+.table {
+  height: 100%;
 }

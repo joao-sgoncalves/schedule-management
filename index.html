@@ -7,22 +7,124 @@
 
     <link rel="stylesheet" href="lib/jquery-ui/css/jquery-ui.min.css">
     <link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
-    <link rel="stylesheet" href="lib/tabulator/css/tabulator.min.css">
+    <link rel="stylesheet" href="lib/tabulator/css/tabulator_bootstrap5.min.css">
     <link rel="stylesheet" href="css/style.css">
   </head>
   <body>
     <div class="container">
-      <div class="mt-3 mb-3">
-        <label class="form-label" for="classes-input">Classes (.csv)</label>
-        <input id="classes-input" class="form-control" type="file" accept="text/csv">
-      </div>
+      <form>
+        <button
+            id="get-classes-btn"
+            class="btn btn-primary"
+            type="button">
+            Get Data
+          </button>
 
-      <div id="classes-table" class="mb-3"></div>
+        <div class="row my-3">
+          <div class="col-auto">
+            <label class="form-label" for="classes-input">Classes file</label>
+            <input
+              id="classes-input"
+              class="form-control"
+              type="file"
+              accept="text/csv">
+          </div>
+        </div>
 
-      <div class="mb-3">
-        <label class="form-label" for="rooms-input">Rooms (.csv)</label>
-        <input id="rooms-input" class="form-control" type="file" accept="text/csv">
-      </div>
+        <div class="row mb-3">
+          <div class="col-auto">
+            <button
+              class="btn btn-primary"
+              type="button"
+              data-import
+              data-file-input="#classes-input"
+              data-table="#classes-table">
+              Import
+            </button>
+          </div>
+          <div class="col-3">
+            <div class="input-group">
+              <button
+                class="btn btn-secondary"
+                type="button"
+                data-preview
+                data-file-input="#classes-input"
+                data-rows-input="#class-rows-input"
+                data-table="#classes-table">
+                Preview
+              </button>
+              <input
+                id="class-rows-input"
+                class="form-control"
+                type="number"
+                value="5"
+                min="1"
+                max="50"
+                aria-label="Number of rows to preview">
+              <span class="input-group-text">rows</span>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div id="classes-table"></div>
+
+      <form>
+        <button
+            id="get-rooms-btn"
+            class="btn btn-primary"
+            type="button">
+            Get Data
+          </button>
+
+        <div class="row my-3">
+          <div class="col-auto">
+            <label class="form-label" for="rooms-input">Rooms file</label>
+            <input
+              id="rooms-input"
+              class="form-control"
+              type="file"
+              accept="text/csv">
+          </div>
+        </div>
+
+        <div class="row mb-3">
+          <div class="col-auto">
+            <button
+              class="btn btn-primary"
+              type="button"
+              data-import
+              data-file-input="#rooms-input"
+              data-table="#rooms-table">
+              Import
+            </button>
+          </div>
+          <div class="col-3">
+            <div class="input-group">
+              <button
+                class="btn btn-secondary"
+                type="button"
+                data-preview
+                data-file-input="#rooms-input"
+                data-rows-input="#class-rows-input"
+                data-table="#rooms-table">
+                Preview
+              </button>
+              <input
+                id="class-rows-input"
+                class="form-control"
+                type="number"
+                value="5"
+                min="1"
+                max="50"
+                aria-label="Number of rows to preview">
+              <span class="input-group-text">rows</span>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <div id="rooms-table"></div>
     </div>
 
     <script src="lib/jquery/js/jquery.min.js"></script>
@@ -32,5 +134,6 @@
     <script src="lib/tabulator/js/tabulator.min.js"></script>
     <script src="lib/tabulator/js/jquery_wrapper.js"></script>
     <script src="js/script.js"></script>
+    <script src="js/table.js"></script>
   </body>
 </html>
