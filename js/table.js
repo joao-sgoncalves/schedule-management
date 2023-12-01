@@ -1,20 +1,3 @@
-var tableFields = {
-  '#classes-table': {
-    building: 'Building',
-    roomName: 'Room Name',
-    normalCapacity: 'Normal Capacity',
-    examCapacity: 'Exam Capacity',
-    numberOfCharacteristics: 'Number of Characteristics',
-  },
-  '#rooms-table': {
-    buildingA: 'Building A',
-    roomNameB: 'Room Name B',
-    normalCapacityC: 'Normal Capacity C',
-    examCapacityD: 'Exam Capacity D',
-    numberOfCharacteristicsE: 'Number of Characteristics E',
-  },
-};
-
 function isTableCreated(selector) {
   return $(selector).hasClass('tabulator');
 }
@@ -57,7 +40,7 @@ function valuesLookup(cell, tableSelector) {
   var cellValue = cell.getValue();
   var rowData = cell.getData();
   var rowValues = Object.values(rowData);
-  var fields = tableFields[tableSelector];
+  var fields = config.tableFields[tableSelector];
 
   return Object.values(fields).filter((value) => {
     return value === cellValue || !rowValues.includes(value);
@@ -76,7 +59,7 @@ $('[data-import]').click(function (event) {
       const data = results.data.slice();
       const fields = results.meta.fields;
 
-      var fieldsRow = fields.reduce(function(obj, field) {
+      var fieldsRow = fields.reduce(function (obj, field) {
         obj[field] = undefined;
         return obj;
       }, {});
@@ -123,7 +106,7 @@ function getData(tableSelector) {
   var data = $(tableSelector).tabulator('getData');
   var fieldsRow = data[0];
 
-  var fields = tableFields[tableSelector];
+  var fields = config.tableFields[tableSelector];
   var fieldNames = Object.keys(fields);
 
   return data.slice(1).map(function (row) {
@@ -141,12 +124,12 @@ function getData(tableSelector) {
   });
 }
 
-$('#get-classes-btn').click(function() {
+$('#get-classes-btn').click(function () {
   var data = getData('#classes-table');
   console.log(data);
 });
 
-$('#get-rooms-btn').click(function() {
+$('#get-rooms-btn').click(function () {
   var data = getData('#rooms-table');
   console.log(data);
 });
