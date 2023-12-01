@@ -2,38 +2,92 @@ function isTableCreated(selector) {
   return $(selector).hasClass('tabulator');
 }
 
-function createTable(selector, data) {
+function createTable(selector, fields, data) {
   $(selector).tabulator({
-    autoColumns: true,
-    autoColumnsDefinitions: function (definitions) {
-      return autoColumnsDefinitions(definitions, selector);
-    },
+    columns: fields.map((field) => {
+      return {
+        title: field,
+        field,
+        editable,
+        editor: 'list',
+        editorParams: {
+          valuesLookup: (cell) => {
+            return valuesLookup(cell, selector);
+          },
+          clearable: true,
+          autocomplete: true,
+          listOnEmpty: true,
+        }
+      };
+    }),
+    rowFormatter,
     frozenRows: 1,
     maxHeight: '50vh',
     data,
   });
+
+  $(selector).tabulator('on', 'cellEdited', (cell) => {
+    var row = cell.getRow();
+
+    if (!row.isFrozen()) {
+      return;
+    }
+
+    var table = cell.getTable();
+    var data = table.getData();
+
+    var cellField = cell.getField();
+    var cellValue = cell.getValue();
+
+    var fields = config.tableFields[selector];
+    var fieldName = Object.keys(fields).find((name) => {
+      return fields[name] === cellValue;
+    });
+
+    // see if it is possible to use updateData, with id
+
+    var newData = data.map((row) => {
+      return Object.entries(row).reduce((rowObj, [field, value]) => {
+        var newField = field === cellField ? fieldName : field;
+        rowObj[newField] = value;
+
+        return rowObj;
+      }, {});
+    });
+
+    table.setData(newData);
+
+    var column = cell.getColumn();
+    column.updateDefinition({ field: fieldName });
+  });
 }
 
-function autoColumnsDefinitions(definitions, tableSelector) {
-  definitions.forEach((column) => {
-    column.editable = editable;
-    column.editor = 'list';
-    column.editorParams = {
-      valuesLookup: function (cell) {
-        return valuesLookup(cell, tableSelector);
-      },
-      clearable: true,
-      autocomplete: true,
-      listOnEmpty: true,
+function updateTable(selector, fields, data) {
+  $(selector).tabulator('setColumns', fields.map((field) => {
+    return {
+      title: field,
+      field,
+      editable,
+      editor: 'list',
+      editorParams: {
+        valuesLookup: (cell) => {
+          return valuesLookup(cell, selector);
+        },
+        clearable: true,
+        autocomplete: true,
+        listOnEmpty: true,
+      }
     };
-  });
+  }));
 
-  return definitions;
+  $(selector).tabulator('setData', data);
 }
 
 function editable(cell) {
   var row = cell.getRow();
-  return row.isFrozen();
+  var field = cell.getField();
+
+  return row.isFrozen() && field !== 'Error';
 }
 
 function valuesLookup(cell, tableSelector) {
@@ -47,7 +101,11 @@ function valuesLookup(cell, tableSelector) {
   });
 }
 
-$('[data-import]').click(function (event) {
+function rowFormatter(row) {
+
+}
+
+$('[data-import]').click((event) => {
   var dataTable = $(event.target).data('table');
   var dataFileInput = $(event.target).data('file-input');
   var file = $(dataFileInput).prop('files')[0];
@@ -55,29 +113,32 @@ $('[data-import]').click(function (event) {
   Papa.parse(file, {
     worker: true,
     header: true,
-    complete: function (results) {
+    complete: (results) => {
       const data = results.data.slice();
-      const fields = results.meta.fields;
+      const fields = results.meta.fields.slice();
 
-      var fieldsRow = fields.reduce(function (obj, field) {
+      fields.push('Error');
+
+      var fieldsRow = fields.reduce((obj, field) => {
         obj[field] = undefined;
         return obj;
       }, {});
+
       data.unshift(fieldsRow);
 
       if (isTableCreated(dataTable)) {
-        $(dataTable).tabulator('setData', data);
+        updateTable(dataTable, fields, data);
       } else {
-        createTable(dataTable, data);
+        createTable(dataTable, fields, data);
       }
     },
-    error: function (err) {
+    error: (err) => {
       console.error('Error parsing file', err);
     },
   });
 });
 
-$('[data-preview]').click(function (event) {
+$('[data-preview]').click((event) => {
   var dataTable = $(event.target).data('table');
   var dataFileInput = $(event.target).data('file-input');
   var dataRowsInput = $(event.target).data('rows-input');
@@ -89,14 +150,26 @@ $('[data-preview]').click(function (event) {
     worker: true,
     header: true,
     preview: preview + 1,
-    complete: function (results) {
+    complete: (results) => {
+      const data = results.data.slice();
+      const fields = results.meta.fields.slice();
+
+      fields.push('Error');
+
+      var fieldsRow = fields.reduce((obj, field) => {
+        obj[field] = undefined;
+        return obj;
+      }, {});
+
+      data.unshift(fieldsRow);
+
       if (isTableCreated(dataTable)) {
-        $(dataTable).tabulator('setData', results.data);
+        updateTable(dataTable, fields, data);
       } else {
-        createTable(dataTable, results.data);
+        createTable(dataTable, fields, data);
       }
     },
-    error: function (err) {
+    error: (err) => {
       console.error('Error parsing file', err);
     },
   });
@@ -104,32 +177,15 @@ $('[data-preview]').click(function (event) {
 
 function getData(tableSelector) {
   var data = $(tableSelector).tabulator('getData');
-  var fieldsRow = data[0];
-
-  var fields = config.tableFields[tableSelector];
-  var fieldNames = Object.keys(fields);
-
-  return data.slice(1).map(function (row) {
-    return Object.keys(row).reduce(function (newRow, rowKey) {
-      var rowValue = row[rowKey];
-      var fieldDescription = fieldsRow[rowKey];
-
-      var fieldName = fieldNames.find(name => {
-        return fields[name] === fieldDescription;
-      }) ?? rowKey;
-
-      newRow[fieldName] = rowValue;
-      return newRow;
-    }, {});
-  });
+  return data.slice(1);
 }
 
-$('#get-classes-btn').click(function () {
+$('#get-classes-btn').click(() => {
   var data = getData('#classes-table');
   console.log(data);
 });
 
-$('#get-rooms-btn').click(function () {
+$('#get-rooms-btn').click(() => {
   var data = getData('#rooms-table');
   console.log(data);
 });
