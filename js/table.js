@@ -4,22 +4,7 @@ function isTableCreated(selector) {
 
 function createTable(selector, fields, data) {
   $(selector).tabulator({
-    columns: fields.map((field) => {
-      return {
-        title: field,
-        field,
-        editable,
-        editor: 'list',
-        editorParams: {
-          valuesLookup: (cell) => {
-            return valuesLookup(cell, selector);
-          },
-          clearable: true,
-          autocomplete: true,
-          listOnEmpty: true,
-        }
-      };
-    }),
+    columns: getColumns(selector, fields),
     rowFormatter,
     frozenRows: 1,
     maxHeight: '50vh',
@@ -27,67 +12,50 @@ function createTable(selector, fields, data) {
   });
 
   $(selector).tabulator('on', 'cellEdited', (cell) => {
-    var row = cell.getRow();
-
-    if (!row.isFrozen()) {
-      return;
-    }
-
-    var table = cell.getTable();
-    var data = table.getData();
-
-    var cellField = cell.getField();
-    var cellValue = cell.getValue();
-
-    var fields = config.tableFields[selector];
-    var fieldName = Object.keys(fields).find((name) => {
-      return fields[name] === cellValue;
-    });
-
-    // see if it is possible to use updateData, with id
-
-    var newData = data.map((row) => {
-      return Object.entries(row).reduce((rowObj, [field, value]) => {
-        var newField = field === cellField ? fieldName : field;
-        rowObj[newField] = value;
-
-        return rowObj;
-      }, {});
-    });
-
-    table.setData(newData);
-
-    var column = cell.getColumn();
-    column.updateDefinition({ field: fieldName });
+    onCellEdited(selector, cell);
   });
 }
 
-function updateTable(selector, fields, data) {
-  $(selector).tabulator('setColumns', fields.map((field) => {
-    return {
-      title: field,
-      field,
-      editable,
-      editor: 'list',
-      editorParams: {
-        valuesLookup: (cell) => {
-          return valuesLookup(cell, selector);
-        },
-        clearable: true,
-        autocomplete: true,
-        listOnEmpty: true,
-      }
-    };
-  }));
+function getColumns(tableSelector, fields) {
+  var columns = fields.map((field) => {
+    return getColumn(tableSelector, field, field);
+  });
 
-  $(selector).tabulator('setData', data);
+  var errorColumn = getColumn(tableSelector, 'Error', 'error');
+  columns.push(errorColumn);
+
+  return columns;
+}
+
+function getColumn(tableSelector, title, field) {
+  return {
+    title,
+    field,
+    editable,
+    editor: 'list',
+    editorParams: {
+      valuesLookup: (cell) => {
+        return valuesLookup(cell, tableSelector);
+      },
+      clearable: true,
+      autocomplete: true,
+      listOnEmpty: true,
+    },
+    cellMouseOver: (_, cell) => {
+      cellMouseOver(cell);
+    },
+    cellMouseOut: (_, cell) => {
+      cellMouseOut(cell);
+    },
+  };
 }
 
 function editable(cell) {
   var row = cell.getRow();
+  var rowIndex = row.getIndex();
   var field = cell.getField();
 
-  return row.isFrozen() && field !== 'Error';
+  return rowIndex === 1 && field !== 'error';
 }
 
 function valuesLookup(cell, tableSelector) {
@@ -101,8 +69,76 @@ function valuesLookup(cell, tableSelector) {
   });
 }
 
-function rowFormatter(row) {
+function cellMouseOver(cell) {
+  var data = cell.getData();
+  var row = cell.getRow();
+  var rowElement = row.getElement();
 
+  if (data.error) {
+    $(rowElement).removeClass('table-danger');
+  }
+}
+
+function cellMouseOut(cell) {
+  var data = cell.getData();
+  var row = cell.getRow();
+  var rowElement = row.getElement();
+
+  if (data.error) {
+    $(rowElement).addClass('table-danger');
+  }
+}
+
+function rowFormatter(row) {
+  var data = row.getData();
+  var rowElement = row.getElement();
+
+  if (data.error) {
+    $(rowElement).addClass("table-danger");
+  }
+}
+
+function onCellEdited(tableSelector, cell) {
+  var row = cell.getRow();
+  var rowIndex = row.getIndex();
+
+  if (rowIndex !== 1) {
+    return;
+  }
+
+  var table = cell.getTable();
+  var data = table.getData();
+
+  var cellField = cell.getField();
+  var cellValue = cell.getValue();
+
+  var fields = config.tableFields[tableSelector];
+  var fieldName = Object.keys(fields).find((name) => {
+    return fields[name] === cellValue;
+  });
+
+  // see if it is possible to use updateData, with id
+
+  var newData = data.map((row) => {
+    return Object.entries(row).reduce((rowObj, [field, value]) => {
+      var newField = field === cellField ? fieldName : field;
+      rowObj[newField] = value;
+
+      return rowObj;
+    }, {});
+  });
+
+  table.setData(newData);
+
+  var column = cell.getColumn();
+  column.updateDefinition({ field: fieldName });
+}
+
+function updateTable(selector, fields, data) {
+  var columns = getColumns(selector, fields);
+
+  $(selector).tabulator('setColumns', columns);
+  $(selector).tabulator('setData', data);
 }
 
 $('[data-import]').click((event) => {
@@ -114,17 +150,14 @@ $('[data-import]').click((event) => {
     worker: true,
     header: true,
     complete: (results) => {
-      const data = results.data.slice();
-      const fields = results.meta.fields.slice();
+      const data = results.data;
+      const fields = results.meta.fields;
 
-      fields.push('Error');
+      data.unshift({});
 
-      var fieldsRow = fields.reduce((obj, field) => {
-        obj[field] = undefined;
-        return obj;
-      }, {});
-
-      data.unshift(fieldsRow);
+      $(data).each((index, row) => {
+        row.id = index + 1;
+      });
 
       if (isTableCreated(dataTable)) {
         updateTable(dataTable, fields, data);
@@ -151,17 +184,14 @@ $('[data-preview]').click((event) => {
     header: true,
     preview: preview + 1,
     complete: (results) => {
-      const data = results.data.slice();
-      const fields = results.meta.fields.slice();
+      const data = results.data;
+      const fields = results.meta.fields;
 
-      fields.push('Error');
+      data.unshift({});
 
-      var fieldsRow = fields.reduce((obj, field) => {
-        obj[field] = undefined;
-        return obj;
-      }, {});
-
-      data.unshift(fieldsRow);
+      $(data).each((index, row) => {
+        row.id = index + 1;
+      });
 
       if (isTableCreated(dataTable)) {
         updateTable(dataTable, fields, data);
