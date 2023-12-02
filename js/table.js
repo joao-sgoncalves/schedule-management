@@ -17,11 +17,11 @@ function createTable(selector, fields, data) {
 }
 
 function getColumns(tableSelector, fields) {
-  var columns = fields.map((field) => {
+  const columns = fields.map((field) => {
     return getColumn(tableSelector, field, field);
   });
 
-  var errorColumn = getColumn(tableSelector, 'Error', 'error');
+  const errorColumn = getColumn(tableSelector, 'Error', 'error');
   columns.push(errorColumn);
 
   return columns;
@@ -51,18 +51,18 @@ function getColumn(tableSelector, title, field) {
 }
 
 function editable(cell) {
-  var row = cell.getRow();
-  var rowIndex = row.getIndex();
-  var field = cell.getField();
+  const row = cell.getRow();
+  const rowIndex = row.getIndex();
+  const field = cell.getField();
 
-  return rowIndex === 1 && field !== 'error';
+  return rowIndex === 0 && field !== 'error';
 }
 
 function valuesLookup(cell, tableSelector) {
-  var cellValue = cell.getValue();
-  var rowData = cell.getData();
-  var rowValues = Object.values(rowData);
-  var fields = config.tableFields[tableSelector];
+  const cellValue = cell.getValue();
+  const rowData = cell.getData();
+  const rowValues = Object.values(rowData);
+  const fields = config.tableFields[tableSelector];
 
   return Object.values(fields).filter((value) => {
     return value === cellValue || !rowValues.includes(value);
@@ -70,9 +70,9 @@ function valuesLookup(cell, tableSelector) {
 }
 
 function cellMouseOver(cell) {
-  var data = cell.getData();
-  var row = cell.getRow();
-  var rowElement = row.getElement();
+  const data = cell.getData();
+  const row = cell.getRow();
+  const rowElement = row.getElement();
 
   if (data.error) {
     $(rowElement).removeClass('table-danger');
@@ -80,9 +80,9 @@ function cellMouseOver(cell) {
 }
 
 function cellMouseOut(cell) {
-  var data = cell.getData();
-  var row = cell.getRow();
-  var rowElement = row.getElement();
+  const data = cell.getData();
+  const row = cell.getRow();
+  const rowElement = row.getElement();
 
   if (data.error) {
     $(rowElement).addClass('table-danger');
@@ -90,8 +90,8 @@ function cellMouseOut(cell) {
 }
 
 function rowFormatter(row) {
-  var data = row.getData();
-  var rowElement = row.getElement();
+  const data = row.getData();
+  const rowElement = row.getElement();
 
   if (data.error) {
     $(rowElement).addClass("table-danger");
@@ -99,29 +99,27 @@ function rowFormatter(row) {
 }
 
 function onCellEdited(tableSelector, cell) {
-  var row = cell.getRow();
-  var rowIndex = row.getIndex();
+  const row = cell.getRow();
+  const rowIndex = row.getIndex();
 
-  if (rowIndex !== 1) {
+  if (rowIndex !== 0) {
     return;
   }
 
-  var table = cell.getTable();
-  var data = table.getData();
+  const table = cell.getTable();
+  const data = table.getData();
 
-  var cellField = cell.getField();
-  var cellValue = cell.getValue();
+  const cellField = cell.getField();
+  const cellValue = cell.getValue();
 
-  var fields = config.tableFields[tableSelector];
-  var fieldName = Object.keys(fields).find((name) => {
+  const fields = config.tableFields[tableSelector];
+  const fieldName = Object.keys(fields).find((name) => {
     return fields[name] === cellValue;
   });
 
-  // see if it is possible to use updateData, with id
-
-  var newData = data.map((row) => {
+  const newData = data.map((row) => {
     return Object.entries(row).reduce((rowObj, [field, value]) => {
-      var newField = field === cellField ? fieldName : field;
+      const newField = field === cellField ? fieldName : field;
       rowObj[newField] = value;
 
       return rowObj;
@@ -130,21 +128,45 @@ function onCellEdited(tableSelector, cell) {
 
   table.setData(newData);
 
-  var column = cell.getColumn();
+  const column = cell.getColumn();
   column.updateDefinition({ field: fieldName });
 }
 
 function updateTable(selector, fields, data) {
-  var columns = getColumns(selector, fields);
+  const columns = getColumns(selector, fields);
 
   $(selector).tabulator('setColumns', columns);
   $(selector).tabulator('setData', data);
 }
 
+function loadTable(selector, fields, data, errors) {
+  const fieldsRow = fields.reduce((row, field) => {
+    row[field] = undefined;
+    return row;
+  }, {});
+
+  const tableData = [fieldsRow, ...data].map((row, index) => ({
+    id: index,
+    ...row,
+    error: undefined,
+  }));
+
+  errors.forEach((error) => {
+    const row = tableData.find((row) => row.id === error.row);
+    row.error = error.message;
+  });
+
+  if (isTableCreated(selector)) {
+    updateTable(selector, fields, tableData);
+  } else {
+    createTable(selector, fields, tableData);
+  }
+}
+
 $('[data-import]').click((event) => {
-  var dataTable = $(event.target).data('table');
-  var dataFileInput = $(event.target).data('file-input');
-  var file = $(dataFileInput).prop('files')[0];
+  const dataTable = $(event.target).data('table');
+  const dataFileInput = $(event.target).data('file-input');
+  const file = $(dataFileInput).prop('files')[0];
 
   Papa.parse(file, {
     worker: true,
@@ -152,18 +174,9 @@ $('[data-import]').click((event) => {
     complete: (results) => {
       const data = results.data;
       const fields = results.meta.fields;
+      const errors = results.errors;
 
-      data.unshift({});
-
-      $(data).each((index, row) => {
-        row.id = index + 1;
-      });
-
-      if (isTableCreated(dataTable)) {
-        updateTable(dataTable, fields, data);
-      } else {
-        createTable(dataTable, fields, data);
-      }
+      loadTable(dataTable, fields, data, errors);
     },
     error: (err) => {
       console.error('Error parsing file', err);
@@ -172,12 +185,12 @@ $('[data-import]').click((event) => {
 });
 
 $('[data-preview]').click((event) => {
-  var dataTable = $(event.target).data('table');
-  var dataFileInput = $(event.target).data('file-input');
-  var dataRowsInput = $(event.target).data('rows-input');
+  const dataTable = $(event.target).data('table');
+  const dataFileInput = $(event.target).data('file-input');
+  const dataRowsInput = $(event.target).data('rows-input');
 
-  var file = $(dataFileInput).prop('files')[0];
-  var preview = parseInt($(dataRowsInput).val(), 10);
+  const file = $(dataFileInput).prop('files')[0];
+  const preview = parseInt($(dataRowsInput).val(), 10);
 
   Papa.parse(file, {
     worker: true,
@@ -186,18 +199,9 @@ $('[data-preview]').click((event) => {
     complete: (results) => {
       const data = results.data;
       const fields = results.meta.fields;
+      const errors = results.errors;
 
-      data.unshift({});
-
-      $(data).each((index, row) => {
-        row.id = index + 1;
-      });
-
-      if (isTableCreated(dataTable)) {
-        updateTable(dataTable, fields, data);
-      } else {
-        createTable(dataTable, fields, data);
-      }
+      loadTable(dataTable, fields, data, errors);
     },
     error: (err) => {
       console.error('Error parsing file', err);
@@ -206,16 +210,16 @@ $('[data-preview]').click((event) => {
 });
 
 function getData(tableSelector) {
-  var data = $(tableSelector).tabulator('getData');
+  const data = $(tableSelector).tabulator('getData');
   return data.slice(1);
 }
 
 $('#get-classes-btn').click(() => {
-  var data = getData('#classes-table');
+  const data = getData('#classes-table');
   console.log(data);
 });
 
 $('#get-rooms-btn').click(() => {
-  var data = getData('#rooms-table');
+  const data = getData('#rooms-table');
   console.log(data);
 });
