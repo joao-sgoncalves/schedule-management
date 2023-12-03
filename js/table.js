@@ -1,25 +1,224 @@
-function isTableCreated(selector) {
-  return $(selector).hasClass('tabulator');
+const variablesRegexp = /\[(.+?)\]/g
+
+$(document).ready(() => {
+  $('[data-bs-toggle="tooltip"]').tooltip({ trigger: 'hover' });
+});
+
+const criteriaTable = new Tabulator('#criteria-table', {
+  columns: [
+    {
+      title: 'ID',
+      field: 'id',
+      sorter: 'number',
+      headerSortTristate: true,
+      vertAlign: 'middle',
+    },
+    {
+      title: 'Nome',
+      field: 'name',
+      editor: 'input',
+      sorter: 'string',
+      headerSortTristate: true,
+      vertAlign: 'middle',
+    },
+    {
+      title: 'Expressão',
+      field: 'expression',
+      editor: 'input',
+      sorter: 'string',
+      headerSortTristate: true,
+      vertAlign: 'middle',
+    },
+    {
+      title: 'Agregador',
+      field: 'aggregator',
+      editor: 'list',
+      editorParams: {
+        values: ['AVG', 'MAX', 'MIN', 'SUM', 'CONCAT', 'COUNT', 'UNIQUE'],
+        clearable: true,
+        autocomplete: true,
+        allowEmpty: true,
+        listOnEmpty: true,
+      },
+      sorter: 'string',
+      headerSortTristate: true,
+      vertAlign: 'middle',
+    },
+    {
+      field: 'delete',
+      tooltip: 'Remover critério',
+      formatter: () => {
+        return '<i class="bi bi-trash-fill text-danger"></i>';
+      },
+      cellClick: (_event, cell) => {
+        const row = cell.getRow();
+        const data = cell.getData();
+        const criteriaField = `criteria-${data.id}`;
+
+        row.delete();
+
+        classTables.forEach((table) => {
+          const columns = table.getColumns();
+          const criteriaIndex = columns.findIndex((column) => column.getField() === criteriaField);
+
+          table.deleteColumn(criteriaField);
+          columns[criteriaIndex - 1].scrollTo();
+        });
+      },
+      hozAlign: 'center',
+      vertAlign: 'middle',
+    },
+  ],
+  maxHeight: '50vh',
+  layout: 'fitDataTable',
+  layoutColumnsOnNewData: true,
+  placeholder: "Sem Dados",
+});
+
+const classTables = [];
+
+criteriaTable.on('cellEdited', (cell) => {
+  const field = cell.getField();
+  const value = cell.getValue();
+  const data = cell.getData();
+  const criteriaField = `criteria-${data.id}`;
+
+  if (field === 'name') {
+    classTables.forEach((table) => {
+      const criteriaColumn = table.getColumn(criteriaField);
+
+      criteriaColumn.updateDefinition({ title: value });
+      criteriaColumn.scrollTo();
+    });
+  } else if (field === 'expression') {
+    classTables.forEach((table) => {
+      const criteriaColumn = table.getColumn(criteriaField);
+      const classesData = table.getData();
+
+      const updatedData = classesData.map((row) => ({
+        id: row.id,
+        [criteriaField]: qualityMutator(row[criteriaField], row, criteriaColumn),
+      }));
+
+      table.updateData(updatedData);
+      criteriaColumn.scrollTo();
+    });
+  } else if (field === 'aggregator') {
+    classTables.forEach((table) => {
+      const criteriaColumn = table.getColumn(criteriaField);
+
+      criteriaColumn.updateDefinition({ bottomCalc: value.toLowerCase() });
+      criteriaColumn.scrollTo();
+    });
+  }
+});
+
+$('#add-criteria-btn').click(() => {
+  const data = criteriaTable.getData();
+  const lastRowData = data.at(-1);
+  const newRowData = { 'id': (lastRowData?.id ?? 0) + 1 };
+
+  criteriaTable.addRow(newRowData);
+  criteriaTable.scrollToRow(newRowData.id);
+
+  classTables.forEach((table) => {
+    const criteriaField = `criteria-${newRowData.id}`;
+
+    table.addColumn({
+      field: criteriaField,
+      mutator: (value, data, _type, _params, component) => {
+        return qualityMutator(value, data, component);
+      },
+    });
+
+    table.scrollToColumn(criteriaField);
+  });
+});
+
+function qualityMutator(value, data, component) {
+  const field = component.getField();
+
+  const qualityData = criteriaTable.getData();
+  const criteriaData = qualityData.find((data) => data.id === field);
+
+  // use [Field] and [class.Field]
+
+  return eval(criteriaData.expression);
 }
 
-function createTable(selector, columns, data) {
-  $(selector).tabulator({
-    columns,
-    rowFormatter,
-    frozenRows: 1,
-    maxHeight: '50vh',
-    layoutColumnsOnNewData: true,
-    data,
+$('#classes-input').change((event) => {
+  const files = Array.from(event.target.files);
+
+  const lastTable = classTables.at(-1);
+  const lastTableId = lastTable?.element.id;
+  const lastTableNumber = parseInt(lastTableId?.split('-').pop() ?? 0, 10);
+
+  files.forEach((file, index) => {
+    const tableNumber = lastTableNumber + index + 1;
+
+    const containerId = `classes-container-${tableNumber}`;
+    const nameInputId = `classes-name-input-${tableNumber}`;
+    const tableId = `classes-table-${tableNumber}`;
+
+    const filename = file.name;
+    const filenameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
+
+    $('#class-tables').append(`
+      <div id="${containerId}" class="d-inline-block mb-3">
+        <div class="d-flex justify-content-between mb-3">
+          <input
+            id="${nameInputId}"
+            class="form-control"
+            type="text"
+            value="${filenameWithoutExt}"
+          >
+          <button
+            class="btn btn-outline-danger delete-classes-btn"
+            type="button"
+            data-bs-toggle="tooltip"
+            data-bs-title="Remover horário"
+          >
+            <i class="bi bi-trash-fill"></i>
+          </button>
+        </div>
+
+        <div id="${tableId}" class="mw-100"></div>
+      </div>
+    `);
+
+    const tooltipsSelector = `#${containerId} [data-bs-toggle="tooltip"]`;
+    $(tooltipsSelector).tooltip({ trigger: 'hover' });
+
+    $(`#${containerId} .delete-classes-btn`).click(() => {
+      $(tooltipsSelector).tooltip('dispose');
+      $(`#${containerId}`).remove();
+
+      // TODO: Remove table from classTables array
+    });
+
+    parse(file, `#${tableId}`);
+  });
+});
+
+function parse(file, tableSelector) {
+  Papa.parse(file, {
+    worker: true,
+    header: true,
+    complete: (results) => {
+      const fields = results.meta.fields;
+      const data = results.data;
+      const errors = results.errors;
+
+      loadTable(tableSelector, fields, data, errors);
+    },
+    error: (err) => {
+      console.error('Error parsing file', err);
+    },
   });
 }
 
-function updateTable(selector, columns, data) {
-  $(selector).tabulator('setColumns', columns);
-  $(selector).tabulator('setData', data);
-}
-
 function loadTable(selector, fields, data, errors) {
-  const columns = getColumns(selector, fields);
+  const columns = getColumns(fields);
 
   const tableData = [{}, ...data].map((row, index) => ({
     id: index,
@@ -43,25 +242,195 @@ function loadTable(selector, fields, data, errors) {
   });
 
   if (isTableCreated(selector)) {
-    updateTable(selector, columns, tableData);
+    // updateTable(selector, columns, tableData);
   } else {
     createTable(selector, columns, tableData);
   }
 }
 
-// Change this to use auto columns instead
-function getColumns(tableSelector, fields) {
-  const columns = fields.map((field) => {
-    return getColumn(tableSelector, field, field);
+function isTableCreated(selector) {
+  return $(selector).hasClass('tabulator');
+}
+
+function createTable(selector, columns, data) {
+  const table = new Tabulator(selector, {
+    columns,
+    rowFormatter,
+    frozenRows: 1,
+    maxHeight: '50vh',
+    layout: 'fitDataTable',
+    layoutColumnsOnNewData: true,
+    data,
+    scrollToColumnPosition: 'middle',
+    scrollToColumnIfVisible: false,
+    placeholder: 'Sem Dados',
   });
 
-  const errorsColumn = getColumn(tableSelector, 'Errors', 'errors');
+  classTables.push(table);
+
+  table.on('cellEdited', (cell) => {
+    const table = cell.getTable();
+    const data = table.getData();
+
+    const cellField = cell.getField();
+    const cellValue = cell.getValue();
+
+    const tableId = table.element.id;
+    const tableType = tableId.split('-', 1)[0];
+
+    const fields = config.tableFields[tableType];
+    const fieldName = Object.keys(fields).find((name) => {
+      return fields[name] === cellValue;
+    });
+
+    const newData = data.map((row) => ({
+      id: row.id,
+      [fieldName]: row[cellField],
+    }));
+
+    table.updateData(newData);
+
+    const column = cell.getColumn();
+    column.updateDefinition({ field: fieldName });
+
+    column.scrollTo();
+  });
+}
+
+// function updateTable(selector, columns, data) {
+//   $(selector).tabulator('setColumns', columns);
+//   $(selector).tabulator('setData', data);
+// }
+
+function getColumns(fields) {
+  const columns = fields.map((field) => {
+    return getColumn(field, field);
+  });
+
+  const idColumn = {
+    title: 'ID',
+    field: 'id',
+    sorter: 'number',
+    headerSortTristate: true,
+    vertAlign: 'middle',
+  };
+  columns.unshift(idColumn);
+
+  const errorsColumn = getColumn('Errors', 'errors');
   columns.push(errorsColumn);
+
+  // columns.push({
+  //   title: 'Custom',
+  //   field: 'Custom',
+  //   editableTitle: true,
+  //   editable,
+  //   editor: 'input',
+  //   mutator,
+  //   tooltip: (_, cell) => {
+  //     return getTooltip(cell);
+  //   },
+  //   formatter,
+  // });
 
   return columns;
 }
 
-function getColumn(tableSelector, title, field) {
+function formatter(cell) {
+  const data = cell.getData();
+  const value = cell.getValue();
+
+  if (data.id === 0) {
+    return value;
+  }
+
+  const table = cell.getTable();
+  const tableData = table.getData();
+
+  const fieldsRow = tableData.find((row) => row.id === 0);
+  const field = cell.getField();
+  const expression = fieldsRow[field];
+
+  if (expression === undefined) {
+    return value;
+  }
+
+  const dataExpression = expression.replace(variablesRegexp, "data['$1']");
+  const cellElement = cell.getElement();
+
+  try {
+    eval(dataExpression);
+  } catch {
+    $(cellElement).addClass('table-danger');
+  }
+
+  return value;
+}
+
+function getTooltip(cell) {
+  const data = cell.getData();
+  let tooltip = undefined;
+
+  if (data.id === 0) {
+    return tooltip;
+  }
+
+  const table = cell.getTable();
+  const tableData = table.getData();
+
+  const fieldsRow = tableData.find((row) => row.id === 0);
+  const field = cell.getField();
+  const expression = fieldsRow[field];
+
+  if (expression === undefined) {
+    return tooltip;
+  }
+
+  const dataExpression = expression.replace(variablesRegexp, "data['$1']");
+  
+  try {
+    eval(dataExpression);
+  } catch (error) {
+    tooltip = error.message;
+  }
+
+  return tooltip;
+}
+
+function mutator(value, data, _, _, component) {
+  let newValue = value;
+
+  if (data.id === 0) {
+    return newValue;
+  }
+
+  const table = component.getTable();
+  const tableData = table.getData();
+
+  const fieldsRow = tableData.find((row) => row.id === 0);
+  const field = component.getField();
+  const expression = fieldsRow[field];
+
+  if (expression === undefined) {
+    return newValue;
+  }
+
+  // console.log('expression:', expression);
+  // console.log('dataExpression:', dataExpression);
+  // console.log('data:', data);
+  // console.log('newValue:', newValue);
+
+  const dataExpression = expression.replace(variablesRegexp, "data['$1']");
+
+  try {
+    newValue = eval(dataExpression);
+  } catch {
+    newValue = value;
+  }
+
+  return newValue;
+}
+
+function getColumn(title, field) {
   return {
     title,
     field,
@@ -70,9 +439,7 @@ function getColumn(tableSelector, title, field) {
     editable,
     editor: 'list',
     editorParams: {
-      valuesLookup: (cell) => {
-        return valuesLookup(cell, tableSelector);
-      },
+      valuesLookup,
       clearable: true,
       autocomplete: true,
       allowEmpty: true,
@@ -89,17 +456,27 @@ function getColumn(tableSelector, title, field) {
 
 function editable(cell) {
   const row = cell.getRow();
+
+  // row instanceof RowComponent ??
+  if (row._row.type !== 'row') {
+    return false;
+  }
+
   const rowIndex = row.getIndex();
   const field = cell.getField();
 
   return rowIndex === 0 && field !== 'errors';
 }
 
-function valuesLookup(cell, tableSelector) {
+function valuesLookup(cell) {
+  const table = cell.getTable();
+  const tableId = table.element.id;
+  const tableType = tableId.split('-', 1)[0];
+
   const cellValue = cell.getValue();
   const rowData = cell.getData();
   const rowValues = Object.values(rowData);
-  const fields = config.tableFields[tableSelector];
+  const fields = config.tableFields[tableType];
 
   return Object.values(fields).filter((value) => {
     return value === cellValue || !rowValues.includes(value);
@@ -180,37 +557,3 @@ $('[data-preview]').click((event) => {
     },
   });
 });
-
-function getData(tableSelector) {
-  const data = $(tableSelector).tabulator('getData');
-  const fieldsRow = data[0];
-
-  const fields = config.tableFields[tableSelector];
-  const fieldNames = Object.keys(fields);
-
-  return data.slice(1).map((row) => {
-    return Object.keys(row).reduce((newRow, field) => {
-      const rowValue = row[field];
-      const fieldTitle = fieldsRow[field];
-
-      const fieldName = fieldNames.find((name) => {
-        return fields[name] === fieldTitle;
-      }) ?? field;
-
-      newRow[fieldName] = rowValue;
-      return newRow;
-    }, {});
-  });
-}
-
-$('#get-classes-btn').click(() => {
-  const data = getData('#classes-table');
-  console.log(data);
-});
-
-$('#get-rooms-btn').click(() => {
-  const data = getData('#rooms-table');
-  console.log(data);
-});
-
-// Use eval() for custom expressions
