@@ -2,27 +2,61 @@ function isTableCreated(selector) {
   return $(selector).hasClass('tabulator');
 }
 
-function createTable(selector, fields, data) {
+function createTable(selector, columns, data) {
   $(selector).tabulator({
-    columns: getColumns(selector, fields),
+    columns,
     rowFormatter,
     frozenRows: 1,
     maxHeight: '50vh',
+    layoutColumnsOnNewData: true,
     data,
-  });
-
-  $(selector).tabulator('on', 'cellEdited', (cell) => {
-    onCellEdited(selector, cell);
   });
 }
 
+function updateTable(selector, columns, data) {
+  $(selector).tabulator('setColumns', columns);
+  $(selector).tabulator('setData', data);
+}
+
+function loadTable(selector, fields, data, errors) {
+  const columns = getColumns(selector, fields);
+
+  const tableData = [{}, ...data].map((row, index) => ({
+    id: index,
+    ...row,
+  }));
+
+  errors.forEach((error) => {
+    let rowId = 0;
+
+    if (error.row !== undefined) {
+      rowId = error.type === 'Quotes' ? error.row : error.row + 1;
+    }
+
+    const row = tableData.find((row) => row.id === rowId);
+
+    if (row.errors === undefined) {
+      row.errors = error.message;
+    } else {
+      row.errors += '\n' + error.message;
+    }
+  });
+
+  if (isTableCreated(selector)) {
+    updateTable(selector, columns, tableData);
+  } else {
+    createTable(selector, columns, tableData);
+  }
+}
+
+// Change this to use auto columns instead
 function getColumns(tableSelector, fields) {
   const columns = fields.map((field) => {
     return getColumn(tableSelector, field, field);
   });
 
-  const errorColumn = getColumn(tableSelector, 'Error', 'error');
-  columns.push(errorColumn);
+  const errorsColumn = getColumn(tableSelector, 'Errors', 'errors');
+  columns.push(errorsColumn);
 
   return columns;
 }
@@ -31,6 +65,8 @@ function getColumn(tableSelector, title, field) {
   return {
     title,
     field,
+    vertAlign: 'middle',
+    formatter: field === 'errors' ? 'textarea' : undefined,
     editable,
     editor: 'list',
     editorParams: {
@@ -39,6 +75,7 @@ function getColumn(tableSelector, title, field) {
       },
       clearable: true,
       autocomplete: true,
+      allowEmpty: true,
       listOnEmpty: true,
     },
     cellMouseOver: (_, cell) => {
@@ -55,7 +92,7 @@ function editable(cell) {
   const rowIndex = row.getIndex();
   const field = cell.getField();
 
-  return rowIndex === 0 && field !== 'error';
+  return rowIndex === 0 && field !== 'errors';
 }
 
 function valuesLookup(cell, tableSelector) {
@@ -74,7 +111,7 @@ function cellMouseOver(cell) {
   const row = cell.getRow();
   const rowElement = row.getElement();
 
-  if (data.error) {
+  if (data.errors) {
     $(rowElement).removeClass('table-danger');
   }
 }
@@ -84,7 +121,7 @@ function cellMouseOut(cell) {
   const row = cell.getRow();
   const rowElement = row.getElement();
 
-  if (data.error) {
+  if (data.errors) {
     $(rowElement).addClass('table-danger');
   }
 }
@@ -93,73 +130,8 @@ function rowFormatter(row) {
   const data = row.getData();
   const rowElement = row.getElement();
 
-  if (data.error) {
+  if (data.errors) {
     $(rowElement).addClass("table-danger");
-  }
-}
-
-function onCellEdited(tableSelector, cell) {
-  const row = cell.getRow();
-  const rowIndex = row.getIndex();
-
-  if (rowIndex !== 0) {
-    return;
-  }
-
-  const table = cell.getTable();
-  const data = table.getData();
-
-  const cellField = cell.getField();
-  const cellValue = cell.getValue();
-
-  const fields = config.tableFields[tableSelector];
-  const fieldName = Object.keys(fields).find((name) => {
-    return fields[name] === cellValue;
-  });
-
-  const newData = data.map((row) => {
-    return Object.entries(row).reduce((rowObj, [field, value]) => {
-      const newField = field === cellField ? fieldName : field;
-      rowObj[newField] = value;
-
-      return rowObj;
-    }, {});
-  });
-
-  table.setData(newData);
-
-  const column = cell.getColumn();
-  column.updateDefinition({ field: fieldName });
-}
-
-function updateTable(selector, fields, data) {
-  const columns = getColumns(selector, fields);
-
-  $(selector).tabulator('setColumns', columns);
-  $(selector).tabulator('setData', data);
-}
-
-function loadTable(selector, fields, data, errors) {
-  const fieldsRow = fields.reduce((row, field) => {
-    row[field] = undefined;
-    return row;
-  }, {});
-
-  const tableData = [fieldsRow, ...data].map((row, index) => ({
-    id: index,
-    ...row,
-    error: undefined,
-  }));
-
-  errors.forEach((error) => {
-    const row = tableData.find((row) => row.id === error.row);
-    row.error = error.message;
-  });
-
-  if (isTableCreated(selector)) {
-    updateTable(selector, fields, tableData);
-  } else {
-    createTable(selector, fields, tableData);
   }
 }
 
@@ -211,7 +183,24 @@ $('[data-preview]').click((event) => {
 
 function getData(tableSelector) {
   const data = $(tableSelector).tabulator('getData');
-  return data.slice(1);
+  const fieldsRow = data[0];
+
+  const fields = config.tableFields[tableSelector];
+  const fieldNames = Object.keys(fields);
+
+  return data.slice(1).map((row) => {
+    return Object.keys(row).reduce((newRow, field) => {
+      const rowValue = row[field];
+      const fieldTitle = fieldsRow[field];
+
+      const fieldName = fieldNames.find((name) => {
+        return fields[name] === fieldTitle;
+      }) ?? field;
+
+      newRow[fieldName] = rowValue;
+      return newRow;
+    }, {});
+  });
 }
 
 $('#get-classes-btn').click(() => {
@@ -223,3 +212,5 @@ $('#get-rooms-btn').click(() => {
   const data = getData('#rooms-table');
   console.log(data);
 });
+
+// Use eval() for custom expressions
