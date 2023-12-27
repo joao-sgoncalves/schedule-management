@@ -1,89 +1,42 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Schedule Management</title>
 
-    <!-- jQuery UI -->
-    <link rel="stylesheet" href="lib/jquery-ui/css/jquery-ui.min.css">
-
     <!-- Bootstrap -->
     <link rel="stylesheet" href="lib/bootstrap/css/bootstrap.min.css">
 
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="lib/bootstrap-icons/css/bootstrap-icons.css">
+
     <!-- Tabulator -->
-    <link rel="stylesheet" href="lib/tabulator/css/tabulator_bootstrap5.min.css">
+    <link rel="stylesheet" href="lib/tabulator/css/tabulator_bootstrap5.css">
 
     <!-- Custom -->
     <link rel="stylesheet" href="css/style.css">
   </head>
   <body>
     <div class="container">
-      <form>
-        <button
-            id="get-classes-btn"
-            class="btn btn-primary"
-            type="button">
-            Get Data
+      <div class="d-inline-block my-3">
+        <div class="d-flex justify-content-between mb-3">
+          <h3>Critérios de Qualidade</h3>
+          <button
+            id="add-criteria-btn"
+            type="button"
+            class="btn btn-outline-success"
+            data-bs-toggle="tooltip"
+            data-bs-title="Adicionar critério"
+          >
+            <i class="bi bi-plus"></i>
           </button>
-
-        <div class="row my-3">
-          <div class="col-auto">
-            <label class="form-label" for="classes-input">Classes file</label>
-            <input
-              id="classes-input"
-              class="form-control"
-              type="file"
-              accept="text/csv">
-          </div>
         </div>
 
-        <div class="row mb-3">
-          <div class="col-auto">
-            <button
-              class="btn btn-primary"
-              type="button"
-              data-import
-              data-file-input="#classes-input"
-              data-table="#classes-table">
-              Import
-            </button>
-          </div>
-          <div class="col-3">
-            <div class="input-group">
-              <button
-                class="btn btn-secondary"
-                type="button"
-                data-preview
-                data-file-input="#classes-input"
-                data-rows-input="#class-rows-input"
-                data-table="#classes-table">
-                Preview
-              </button>
-              <input
-                id="class-rows-input"
-                class="form-control"
-                type="number"
-                value="5"
-                min="1"
-                max="50"
-                aria-label="Number of rows to preview">
-              <span class="input-group-text">rows</span>
-            </div>
-          </div>
-        </div>
-      </form>
+        <div id="criteria-table" class="mw-100"></div>
+      </div>
 
-      <div id="classes-table"></div>
-
-      <form>
-        <button
-            id="get-rooms-btn"
-            class="btn btn-primary"
-            type="button">
-            Get Data
-          </button>
-
+      <!-- <form>
         <div class="row my-3">
           <div class="col-auto">
             <label class="form-label" for="rooms-input">Rooms file</label>
@@ -94,49 +47,31 @@
               accept="text/csv">
           </div>
         </div>
-
-        <div class="row mb-3">
-          <div class="col-auto">
-            <button
-              class="btn btn-primary"
-              type="button"
-              data-import
-              data-file-input="#rooms-input"
-              data-table="#rooms-table">
-              Import
-            </button>
-          </div>
-          <div class="col-3">
-            <div class="input-group">
-              <button
-                class="btn btn-secondary"
-                type="button"
-                data-preview
-                data-file-input="#rooms-input"
-                data-rows-input="#class-rows-input"
-                data-table="#rooms-table">
-                Preview
-              </button>
-              <input
-                id="class-rows-input"
-                class="form-control"
-                type="number"
-                value="5"
-                min="1"
-                max="50"
-                aria-label="Number of rows to preview">
-              <span class="input-group-text">rows</span>
-            </div>
-          </div>
-        </div>
       </form>
 
-      <div id="rooms-table"></div>
+      <div id="rooms-table"></div> -->
+
+      <div class="row mb-3">
+        <div class="col-auto">
+          <label class="form-label" for="classes-input">Ficheiros de horários (.csv)</label>
+          <input
+            id="classes-input"
+            class="form-control"
+            type="file"
+            accept="text/csv"
+            multiple>
+        </div>
+      </div>
+
+      <div id="class-tables" class="row mb-3"></div>
+  
+      <div id="quality-chart" class="row mb-3"></div>
+
+      <button id="create-chart-btn" class="btn btn-primary" type="button">Create Quality Chart</button>
     </div>
 
-    <!-- jQuery & jQuery UI -->
+    <!-- jQuery -->
     <script src="lib/jquery/js/jquery.min.js"></script>
-    <script src="lib/jquery-ui/js/jquery-ui.min.js"></script>
 
     <!-- Bootstrap -->
     <script src="lib/bootstrap/js/bootstrap.bundle.min.js"></script>
@@ -145,15 +80,15 @@
     <script src="lib/papaparse/js/papaparse.min.js"></script>
 
     <!-- Tabulator -->
-    <script src="lib/tabulator/js/tabulator.min.js"></script>
-    <script src="lib/tabulator/js/jquery_wrapper.js"></script>
+    <script src="lib/tabulator/js/tabulator.js"></script>
 
     <!-- Plotly -->
-    <script src="lib/plotly/js/plotly-2.27.0.min.js"></script>
+    <script src="lib/plotly/js/plotly-2.27.0.js"></script>
 
     <!-- Custom -->
     <script src="js/config.js"></script>
     <script src="js/table.js"></script>
+    <script src="js/graph.js"></script>
     <script src="js/script.js"></script>
   </body>
 </html>
