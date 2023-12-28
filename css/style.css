@@ -1,17 +1,3 @@
-.classes-name-heading {
+.table-name-heading {
   cursor: pointer;
-}
-
-.classes-name-input {
-  min-width: 25%;
-  max-width: 50%;
-}
-
-.rooms-name-heading {
-  cursor: pointer;
-}
-
-.rooms-name-input {
-  min-width: 25%;
-  max-width: 50%;
 }

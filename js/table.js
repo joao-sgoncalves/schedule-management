@@ -1,3 +1,5 @@
+// TODO: Ensure every table has an ID (the ID of the container maybe (?))
+
 const classTables = [];
 const roomTables = [];
 const variablesRegexp = /\[(.+?)\]/g
@@ -158,22 +160,47 @@ $('#classes-input').change((event) => {
 
     const containerId = `classes-container-${tableNumber}`;
     const tableId = `classes-table-${tableNumber}`;
+    const roomsSelectId = `rooms-select-${tableNumber}`;
 
     const filename = file.name;
     const filenameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
 
+    const roomTableNames = getTableNames('#room-tables');
+    
+    const roomsSelectOptions = roomTableNames.map((name) => {
+      return `<option>${name}</option>`;
+    });
+
+    roomsSelectOptions.unshift('<option value="-1" selected>-- Escolha uma opção --</option>');
+
+    const roomsSelect = `
+      <select
+        id="${roomsSelectId}"
+        class="rooms-select form-select w-auto me-3"
+        aria-label="Selecionar tabela de salas"
+      >
+        ${roomsSelectOptions.join('\n')}
+      </select>
+    `;
+
     $('#class-tables').append(`
-      <div id="${containerId}" class="d-inline-block mb-3">
+      <div id="${containerId}" class="table-container d-inline-block mw-100 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="classes-name-heading">${filenameWithoutExt}</h5>
-          <button
-            class="btn btn-outline-danger delete-classes-btn"
-            type="button"
-            data-bs-toggle="tooltip"
-            data-bs-title="Remover tabela de horário"
-          >
-            <i class="bi bi-trash-fill"></i>
-          </button>
+          <h5 class="table-name-heading mb-0">${filenameWithoutExt}</h5>
+          <div class="d-flex">
+            <div class="d-flex align-items-center">
+              <label class="form-label mb-0 me-2" for="${roomsSelectId}">Tabela de salas:</label>
+              ${roomsSelect}
+            </div>
+            <button
+              class="btn btn-outline-danger delete-table-btn"
+              type="button"
+              data-bs-toggle="tooltip"
+              data-bs-title="Remover tabela de horário"
+            >
+              <i class="bi bi-trash-fill"></i>
+            </button>
+          </div>
         </div>
 
         <div id="${tableId}" class="mw-100"></div>
@@ -183,43 +210,10 @@ $('#classes-input').change((event) => {
     const tooltipsSelector = `#${containerId} [data-bs-toggle="tooltip"]`;
     $(tooltipsSelector).tooltip({ trigger: 'hover' });
 
-    $(`#${containerId} .delete-classes-btn`).click(() => {
-      $(tooltipsSelector).tooltip('dispose');
-      $(`#${containerId}`).remove();
-
-      const tableIndex = classTables.findIndex((table) => table.element.id === tableId);
-      classTables.splice(tableIndex, 1);
-    });
-
     parse(file, `#${tableId}`);
   });
 
   $(event.target).val(null);
-});
-
-$('#class-tables').on('click', '.classes-name-heading', (event) => {
-  const $target = $(event.target);
-
-  const $input = $(`
-    <input
-      class="classes-name-input form-control w-auto"
-      type="text"
-      value="${$target.text()}"
-    >
-  `);
-
-  $target.replaceWith($input);
-  $input.focus();
-});
-
-$('#class-tables').on('blur', '.classes-name-input', (event) => {
-  const $target = $(event.target);
-
-  const $heading = $(`
-    <h5 class="classes-name-heading">${$target.val()}</h5>
-  `);
-
-  $target.replaceWith($heading);
 });
 
 $('#rooms-input').change((event) => {
@@ -239,11 +233,11 @@ $('#rooms-input').change((event) => {
     const filenameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
 
     $('#room-tables').append(`
-      <div id="${containerId}" class="d-inline-block mw-100 mb-3">
+      <div id="${containerId}" class="table-container d-inline-block mw-100 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="rooms-name-heading">${filenameWithoutExt}</h5>
+          <h5 class="table-name-heading mb-0">${filenameWithoutExt}</h5>
           <button
-            class="btn btn-outline-danger delete-rooms-btn"
+            class="delete-table-btn btn btn-outline-danger delete-rooms-btn"
             type="button"
             data-bs-toggle="tooltip"
             data-bs-title="Remover tabela de salas"
@@ -259,44 +253,91 @@ $('#rooms-input').change((event) => {
     const tooltipsSelector = `#${containerId} [data-bs-toggle="tooltip"]`;
     $(tooltipsSelector).tooltip({ trigger: 'hover' });
 
-    $(`#${containerId} .delete-rooms-btn`).click(() => {
-      $(tooltipsSelector).tooltip('dispose');
-      $(`#${containerId}`).remove();
-
-      const tableIndex = roomTables.findIndex((table) => table.element.id === tableId);
-      roomTables.splice(tableIndex, 1);
-    });
-
     parse(file, `#${tableId}`);
   });
 
   $(event.target).val(null);
 });
 
-$('#room-tables').on('click', '.rooms-name-heading', (event) => {
+$('body').on('click', '.table-name-heading', (event) => {
   const $target = $(event.target);
+  const text = $target.text();
 
-  const $input = $(`
-    <input
-      class="rooms-name-input form-control w-auto"
-      type="text"
-      value="${$target.text()}"
-    >
-  `);
+  const $input = $('<input></input>')
+    .addClass('table-name-input form-control w-auto')
+    .attr('type', 'text')
+    .attr('value', text);
 
   $target.replaceWith($input);
   $input.focus();
 });
 
-$('#room-tables').on('blur', '.rooms-name-input', (event) => {
+$('body').on('blur', '.table-name-input', (event) => {
   const $target = $(event.target);
+  const value = $target.val();
 
-  const $heading = $(`
-    <h5 class="rooms-name-heading">${$target.val()}</h5>
-  `);
+  const $heading = $('<h5></h5>')
+    .addClass('table-name-heading mb-0')
+    .text(value);
 
   $target.replaceWith($heading);
+  //   updateTableNameSelects('.rooms-select', '#room-tables');
 });
+
+$('body').on('click', '.delete-table-btn', (event) => {
+  const $target = $(event.target);
+  const $tableContainer = $target.closest('.table-container');  
+  const containerId = $tableContainer.attr('id');
+
+  const $tooltips = $(`#${containerId} [data-bs-toggle="tooltip"]`);
+  $tooltips.tooltip('dispose');
+
+  $tableContainer.remove();
+
+  // const tooltipsSelector = `#${containerId} [data-bs-toggle="tooltip"]`;
+  // $(tooltipsSelector).tooltip({ trigger: 'hover' });
+
+    //   $(tooltipsSelector).tooltip('dispose');
+  //   $(`#${containerId}`).remove();
+
+  //   const tableIndex = roomTables.findIndex((table) => table.element.id === tableId);
+  //   roomTables.splice(tableIndex, 1);
+});
+
+function getTableNames(selector) {
+  const names = [];
+
+  $(`${selector} .table-name`).each((_index, element) => {
+    const $element = $(element);
+    const name = $element.is('input') ? $element.val() : $element.text();
+
+    names.push(name);
+  });
+
+  return names;
+}
+
+function updateTableNameSelects(selectSelector, nameSelector) {
+  const tableNames = getTableNames(nameSelector);
+
+  $(selectSelector).each((_index, element) => {
+    const $element = $(element);
+    
+    $element.empty();
+
+    const $defaultOption = $('<option></option>')
+      .attr('value', '-1')
+      .attr('selected', '')
+      .text('-- Escolha uma opção --');
+
+    $element.append($defaultOption);
+
+    tableNames.forEach((name) => {
+      const $nameOption = $('<option></option>').text(name);
+      $element.append($nameOption);
+    });
+  });
+}
 
 function parse(file, tableSelector) {
   Papa.parse(file, {
