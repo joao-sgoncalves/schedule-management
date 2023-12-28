@@ -43,6 +43,7 @@ function createQualityChart() {
     const tableId = table.element.id;
     const tableNumber = parseInt(tableId.split('-').pop(), 10);
 
+    // TODO: Avoid using IDs
     const tableNameInputId = `classes-name-input-${tableNumber}`;
     const tableName = $(`#${tableNameInputId}`).val();
 

@@ -19,9 +19,17 @@
   </head>
   <body>
     <div class="container">
+      <select class="form-select w-auto" aria-label="Selecionar tabela de salas">
+        <option selected>(Selecionar tabela de salas)</option>
+        <option>Tabela de salas 1</option>
+        <option>Tabela de salas 2</option>
+        <option>Tabela de salas 3</option>
+      </select>
+
+      <!-- Quality Criteria Table -->
       <div class="d-inline-block my-3">
-        <div class="d-flex justify-content-between mb-3">
-          <h3>Critérios de Qualidade</h3>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5>Critérios de Qualidade</h5>
           <button
             id="add-criteria-btn"
             type="button"
@@ -36,21 +44,29 @@
         <div id="criteria-table" class="mw-100"></div>
       </div>
 
-      <!-- <form>
-        <div class="row my-3">
+      <!-- Room Tables -->
+      <div>
+        <div class="row mb-3">
           <div class="col-auto">
-            <label class="form-label" for="rooms-input">Rooms file</label>
+            <label class="form-label" for="rooms-input">Ficheiros de salas (.csv)</label>
             <input
               id="rooms-input"
               class="form-control"
               type="file"
-              accept="text/csv">
+              accept="text/csv"
+              multiple
+            >
           </div>
         </div>
-      </form>
 
-      <div id="rooms-table"></div> -->
+        <div class="row mb-3">
+          <div class="col-auto">
+            <div id="room-tables"></div>
+          </div>
+        </div>
+      </div>
 
+      <!-- Class Tables -->
       <div class="row mb-3">
         <div class="col-auto">
           <label class="form-label" for="classes-input">Ficheiros de horários (.csv)</label>
@@ -65,7 +81,12 @@
 
       <div id="class-tables" class="row mb-3"></div>
   
-      <div id="quality-chart" class="row mb-3"></div>
+      <!-- Quality Chart -->
+      <div class="row mb-3">
+        <div class="col">
+          <div id="quality-chart"></div>
+        </div>
+      </div>
 
       <button id="create-chart-btn" class="btn btn-primary" type="button">Create Quality Chart</button>
     </div>

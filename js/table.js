@@ -1,3 +1,5 @@
+const classTables = [];
+const roomTables = [];
 const variablesRegexp = /\[(.+?)\]/g
 
 $(document).ready(() => {
@@ -74,8 +76,6 @@ const criteriaTable = new Tabulator('#criteria-table', {
   layoutColumnsOnNewData: true,
   placeholder: "Sem Dados",
 });
-
-const classTables = [];
 
 criteriaTable.on('cellEdited', (cell) => {
   const field = cell.getField();
@@ -157,7 +157,6 @@ $('#classes-input').change((event) => {
     const tableNumber = lastTableNumber + index + 1;
 
     const containerId = `classes-container-${tableNumber}`;
-    const nameInputId = `classes-name-input-${tableNumber}`;
     const tableId = `classes-table-${tableNumber}`;
 
     const filename = file.name;
@@ -165,18 +164,13 @@ $('#classes-input').change((event) => {
 
     $('#class-tables').append(`
       <div id="${containerId}" class="d-inline-block mb-3">
-        <div class="d-flex justify-content-between mb-3">
-          <input
-            id="${nameInputId}"
-            class="form-control"
-            type="text"
-            value="${filenameWithoutExt}"
-          >
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="classes-name-heading">${filenameWithoutExt}</h5>
           <button
             class="btn btn-outline-danger delete-classes-btn"
             type="button"
             data-bs-toggle="tooltip"
-            data-bs-title="Remover horário"
+            data-bs-title="Remover tabela de horário"
           >
             <i class="bi bi-trash-fill"></i>
           </button>
@@ -193,11 +187,115 @@ $('#classes-input').change((event) => {
       $(tooltipsSelector).tooltip('dispose');
       $(`#${containerId}`).remove();
 
-      // TODO: Remove table from classTables array
+      const tableIndex = classTables.findIndex((table) => table.element.id === tableId);
+      classTables.splice(tableIndex, 1);
     });
 
     parse(file, `#${tableId}`);
   });
+
+  $(event.target).val(null);
+});
+
+$('#class-tables').on('click', '.classes-name-heading', (event) => {
+  const $target = $(event.target);
+
+  const $input = $(`
+    <input
+      class="classes-name-input form-control w-auto"
+      type="text"
+      value="${$target.text()}"
+    >
+  `);
+
+  $target.replaceWith($input);
+  $input.focus();
+});
+
+$('#class-tables').on('blur', '.classes-name-input', (event) => {
+  const $target = $(event.target);
+
+  const $heading = $(`
+    <h5 class="classes-name-heading">${$target.val()}</h5>
+  `);
+
+  $target.replaceWith($heading);
+});
+
+$('#rooms-input').change((event) => {
+  const files = Array.from(event.target.files);
+
+  const lastTable = classTables.at(-1);
+  const lastTableId = lastTable?.element.id;
+  const lastTableNumber = parseInt(lastTableId?.split('-').pop() ?? 0, 10);
+
+  files.forEach((file, index) => {
+    const tableNumber = lastTableNumber + index + 1;
+
+    const containerId = `rooms-container-${tableNumber}`;
+    const tableId = `rooms-table-${tableNumber}`;
+
+    const filename = file.name;
+    const filenameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
+
+    $('#room-tables').append(`
+      <div id="${containerId}" class="d-inline-block mw-100 mb-3">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="rooms-name-heading">${filenameWithoutExt}</h5>
+          <button
+            class="btn btn-outline-danger delete-rooms-btn"
+            type="button"
+            data-bs-toggle="tooltip"
+            data-bs-title="Remover tabela de salas"
+          >
+            <i class="bi bi-trash-fill"></i>
+          </button>
+        </div>
+
+        <div id="${tableId}" class="mw-100"></div>
+      </div>
+    `);
+
+    const tooltipsSelector = `#${containerId} [data-bs-toggle="tooltip"]`;
+    $(tooltipsSelector).tooltip({ trigger: 'hover' });
+
+    $(`#${containerId} .delete-rooms-btn`).click(() => {
+      $(tooltipsSelector).tooltip('dispose');
+      $(`#${containerId}`).remove();
+
+      const tableIndex = roomTables.findIndex((table) => table.element.id === tableId);
+      roomTables.splice(tableIndex, 1);
+    });
+
+    parse(file, `#${tableId}`);
+  });
+
+  $(event.target).val(null);
+});
+
+$('#room-tables').on('click', '.rooms-name-heading', (event) => {
+  const $target = $(event.target);
+
+  const $input = $(`
+    <input
+      class="rooms-name-input form-control w-auto"
+      type="text"
+      value="${$target.text()}"
+    >
+  `);
+
+  $target.replaceWith($input);
+  $input.focus();
+});
+
+$('#room-tables').on('blur', '.rooms-name-input', (event) => {
+  const $target = $(event.target);
+
+  const $heading = $(`
+    <h5 class="rooms-name-heading">${$target.val()}</h5>
+  `);
+
+  $target.replaceWith($heading);
 });
 
 function parse(file, tableSelector) {
@@ -212,7 +310,7 @@ function parse(file, tableSelector) {
       loadTable(tableSelector, fields, data, errors);
     },
     error: (err) => {
-      console.error('Error parsing file', err);
+      console.error(`Error parsing file '${file.name}'`, err);
     },
   });
 }
@@ -434,6 +532,7 @@ function getColumn(title, field) {
   return {
     title,
     field,
+    headerSortTristate: true,
     vertAlign: 'middle',
     formatter: field === 'errors' ? 'textarea' : undefined,
     editable,
