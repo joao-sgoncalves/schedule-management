@@ -16,6 +16,8 @@
 
     <!-- CodeMirror -->
     <link rel="stylesheet" href="lib/codemirror/css/codemirror.css">
+    <link rel="stylesheet" href="lib/codemirror/addon/hint/show-hint.css">
+    <link rel="stylesheet" href="lib/codemirror/addon/lint/lint.css">
 
     <!-- Custom -->
     <link rel="stylesheet" href="css/style.css">
@@ -23,7 +25,7 @@
   <body>
     <div class="container">
       <div id="codemirror-table"></div>
-      <!-- <textarea id="codemirror-test"></textarea> -->
+      <textarea id="codemirror-test"></textarea>
 
       <!-- Quality Criteria Table -->
       <div class="d-inline-block my-3">
@@ -105,6 +107,10 @@
     <!-- CodeMirror -->
     <script src="lib/codemirror/js/codemirror.js"></script>
     <script src="lib/codemirror/mode/javascript.js"></script>
+    <script src="lib/codemirror/addon/hint/show-hint.js"></script>
+    <script src="lib/codemirror/addon/hint/javascript-hint.js"></script>
+    <script src="lib/codemirror/addon/lint/lint.js"></script>
+    <script src="lib/codemirror/addon/lint/javascript-lint.js"></script>
 
     <!-- Plotly -->
     <script src="lib/plotly/js/plotly-2.27.0.js"></script>
