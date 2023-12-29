@@ -165,10 +165,10 @@ $('#classes-input').change((event) => {
     const filename = file.name;
     const filenameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
 
-    const roomTableNames = getTableNames('#room-tables');
+    const roomTableInfos = getTableInfos('#room-tables');
     
-    const roomsSelectOptions = roomTableNames.map((name) => {
-      return `<option>${name}</option>`;
+    const roomsSelectOptions = roomTableInfos.map((info) => {
+      return `<option>${info.name}</option>`;
     });
 
     roomsSelectOptions.unshift('<option value="-1" selected>-- Escolha uma opção --</option>');
@@ -176,7 +176,7 @@ $('#classes-input').change((event) => {
     const roomsSelect = `
       <select
         id="${roomsSelectId}"
-        class="rooms-select form-select w-auto me-3"
+        class="table-names-select form-select w-auto me-3"
         aria-label="Selecionar tabela de salas"
       >
         ${roomsSelectOptions.join('\n')}
@@ -186,7 +186,7 @@ $('#classes-input').change((event) => {
     $('#class-tables').append(`
       <div id="${containerId}" class="table-container d-inline-block mw-100 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="table-name-heading mb-0">${filenameWithoutExt}</h5>
+          <h5 class="table-name-heading table-name mb-0">${filenameWithoutExt}</h5>
           <div class="d-flex">
             <div class="d-flex align-items-center">
               <label class="form-label mb-0 me-2" for="${roomsSelectId}">Tabela de salas:</label>
@@ -219,7 +219,7 @@ $('#classes-input').change((event) => {
 $('#rooms-input').change((event) => {
   const files = Array.from(event.target.files);
 
-  const lastTable = classTables.at(-1);
+  const lastTable = roomTables.at(-1);
   const lastTableId = lastTable?.element.id;
   const lastTableNumber = parseInt(lastTableId?.split('-').pop() ?? 0, 10);
 
@@ -235,7 +235,7 @@ $('#rooms-input').change((event) => {
     $('#room-tables').append(`
       <div id="${containerId}" class="table-container d-inline-block mw-100 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="table-name-heading mb-0">${filenameWithoutExt}</h5>
+          <div class="table-full-name d-flex align-items-center"><h5 class="table-id mb-0">${tableNumber}</h5><h5 class="mb-0 mx-1"> - </h5><h5 class="table-name-heading table-name mb-0">${filenameWithoutExt}</h5></div>
           <button
             class="delete-table-btn btn btn-outline-danger delete-rooms-btn"
             type="button"
@@ -264,7 +264,7 @@ $('body').on('click', '.table-name-heading', (event) => {
   const text = $target.text();
 
   const $input = $('<input></input>')
-    .addClass('table-name-input form-control w-auto')
+    .addClass('table-name-input table-name form-control w-auto')
     .attr('type', 'text')
     .attr('value', text);
 
@@ -277,11 +277,19 @@ $('body').on('blur', '.table-name-input', (event) => {
   const value = $target.val();
 
   const $heading = $('<h5></h5>')
-    .addClass('table-name-heading mb-0')
+    .addClass('table-name-heading table-name mb-0')
     .text(value);
 
   $target.replaceWith($heading);
-  //   updateTableNameSelects('.rooms-select', '#room-tables');
+
+  // TODO: Move this inside updateTableNameSelects (?)
+  // TODO: Directly call find on $tablesContainer instead of passing the containerId (?)
+  const $tablesContainer = $heading.closest('.tables-container');
+  
+  const containerId = $tablesContainer.attr('id');
+  const dataNameSelects = $tablesContainer.data('name-selects');
+
+  updateTableNameSelects(`#${containerId}`, dataNameSelects);
 });
 
 $('body').on('click', '.delete-table-btn', (event) => {
@@ -304,38 +312,53 @@ $('body').on('click', '.delete-table-btn', (event) => {
   //   roomTables.splice(tableIndex, 1);
 });
 
-function getTableNames(selector) {
-  const names = [];
+function getTableInfos(selector) {
+  const infos = [];
 
-  $(`${selector} .table-name`).each((_index, element) => {
-    const $element = $(element);
-    const name = $element.is('input') ? $element.val() : $element.text();
+  $(`${selector} .table-container`).each((_index, container) => {
+    const $container = $(container);
+    const tableInfo = {};
 
-    names.push(name);
+    const $tableFullName = $container.find('.table-full-name');
+    tableInfo.fullName = $tableFullName.text();
+
+    const $tableId = $container.find('.table-id');
+    tableInfo.id = parseInt($tableId.text(), 10);
+
+    const $tableName = $container.find('.table-name');
+    tableInfo.name = $tableName.is('input') ? $tableName.val() : $tableName.text();
+
+    infos.push(tableInfo);
   });
 
-  return names;
+  return infos;
 }
 
-function updateTableNameSelects(selectSelector, nameSelector) {
-  const tableNames = getTableNames(nameSelector);
+function updateTableNameSelects(nameSelector, selectSelector) {
+  const tableInfos = getTableInfos(nameSelector);
 
-  $(selectSelector).each((_index, element) => {
-    const $element = $(element);
-    
-    $element.empty();
+  $(`${selectSelector} .table-names-select`).each((_index, select) => {
+    const $select = $(select);
+    const selectedValue = $select.val();
+
+    $select.empty();
 
     const $defaultOption = $('<option></option>')
       .attr('value', '-1')
-      .attr('selected', '')
       .text('-- Escolha uma opção --');
 
-    $element.append($defaultOption);
+    $select.append($defaultOption);
 
-    tableNames.forEach((name) => {
-      const $nameOption = $('<option></option>').text(name);
-      $element.append($nameOption);
+    tableInfos.forEach((info) => {
+      const $nameOption = $('<option></option>')
+        .attr('value', info.id)
+        .text(info.fullName);
+  
+      $select.append($nameOption);
     });
+
+    // TODO: See what happens if this previously selected value no longer exists. If the table is removed, for example
+    $select.val(selectedValue);
   });
 }
 
