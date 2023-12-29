@@ -14,11 +14,17 @@
     <!-- Tabulator -->
     <link rel="stylesheet" href="lib/tabulator/css/tabulator_bootstrap5.css">
 
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="lib/codemirror/css/codemirror.css">
+
     <!-- Custom -->
     <link rel="stylesheet" href="css/style.css">
   </head>
   <body>
     <div class="container">
+      <div id="codemirror-table"></div>
+      <!-- <textarea id="codemirror-test"></textarea> -->
+
       <!-- Quality Criteria Table -->
       <div class="d-inline-block my-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -96,12 +102,17 @@
     <!-- Tabulator -->
     <script src="lib/tabulator/js/tabulator.js"></script>
 
+    <!-- CodeMirror -->
+    <script src="lib/codemirror/js/codemirror.js"></script>
+    <script src="lib/codemirror/mode/javascript.js"></script>
+
     <!-- Plotly -->
     <script src="lib/plotly/js/plotly-2.27.0.js"></script>
 
     <!-- Custom -->
     <script src="js/config.js"></script>
     <script src="js/table.js"></script>
+    <script src="js/editor.js"></script>
     <script src="js/graph.js"></script>
     <script src="js/script.js"></script>
   </body>

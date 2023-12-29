@@ -186,7 +186,7 @@ $('#classes-input').change((event) => {
     $('#class-tables').append(`
       <div id="${containerId}" class="table-container d-inline-block mw-100 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="table-name-heading table-name mb-0">${filenameWithoutExt}</h5>
+          <div class="table-full-name d-flex align-items-center"><h5 class="table-id mb-0">${tableNumber}</h5><h5 class="mb-0 mx-1"> - </h5><h5 class="table-name-heading table-name mb-0">${filenameWithoutExt}</h5></div>
           <div class="d-flex">
             <div class="d-flex align-items-center">
               <label class="form-label mb-0 me-2" for="${roomsSelectId}">Tabela de salas:</label>
@@ -353,12 +353,14 @@ function updateTableNameSelects(nameSelector, selectSelector) {
       const $nameOption = $('<option></option>')
         .attr('value', info.id)
         .text(info.fullName);
-  
+
       $select.append($nameOption);
     });
 
-    // TODO: See what happens if this previously selected value no longer exists. If the table is removed, for example
-    $select.val(selectedValue);
+    const optionExists = $select.find(`option[value="${selectedValue}"]`).length > 0;
+    const newSelectedValue = optionExists ? selectedValue : '-1';
+
+    $select.val(newSelectedValue);
   });
 }
 
