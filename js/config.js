@@ -15,4 +15,18 @@ var config = {
       numberOfCharacteristicsE: 'Number of Characteristics E',
     },
   },
+  defaultCriteria: [
+    {
+      id: 1,
+      name: 'Nome 1',
+      expression: 'Expressão 1',
+      aggregator: 'MAX',
+    },
+    {
+      id: 2,
+      name: 'Nome 2',
+      expression: 'Expressão 2',
+      aggregator: 'SUM',
+    },
+  ],
 };

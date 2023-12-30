@@ -1,15 +1,35 @@
 // TODO: Ensure every table has an ID (the ID of the container maybe (?))
 
+const criteriaTable = createCriteriaTable();
 const classTables = [];
 const roomTables = [];
+
 const variablesRegexp = /\[(.+?)\]/g
 
 $(document).ready(() => {
   $('[data-bs-toggle="tooltip"]').tooltip({ trigger: 'hover' });
 });
 
-const criteriaTable = new Tabulator('#criteria-table', {
-  columns: [
+function createCriteriaTable() {
+  const selector = '#criteria-table';
+  
+  const columns = getCriteriaColumns();
+  const data = getLocalCriteria() || config.defaultCriteria;
+  
+  const options = {
+    columns,
+    data,
+    maxHeight: '50vh',
+    layout: 'fitDataTable',
+    layoutColumnsOnNewData: true,
+    placeholder: "Sem Dados",
+  };
+
+  return new Tabulator(selector, options);
+}
+
+function getCriteriaColumns() {
+  return [
     {
       title: 'ID',
       field: 'id',
@@ -72,12 +92,26 @@ const criteriaTable = new Tabulator('#criteria-table', {
       hozAlign: 'center',
       vertAlign: 'middle',
     },
-  ],
-  maxHeight: '50vh',
-  layout: 'fitDataTable',
-  layoutColumnsOnNewData: true,
-  placeholder: "Sem Dados",
+  ];
+}
+
+criteriaTable.on('dataLoaded', (data) => {
+  updateLocalCriteria(data);
 });
+
+criteriaTable.on('dataChanged', (data) => {
+  updateLocalCriteria(data);
+});
+
+function getLocalCriteria() {
+  const jsonData = localStorage.getItem('qualityCriteria');
+  return JSON.parse(jsonData);
+}
+
+function updateLocalCriteria(data) {
+  const jsonData = JSON.stringify(data);
+  localStorage.setItem('qualityCriteria', jsonData);
+}
 
 criteriaTable.on('cellEdited', (cell) => {
   const field = cell.getField();
