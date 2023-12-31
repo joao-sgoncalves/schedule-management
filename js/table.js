@@ -711,6 +711,38 @@ function rowFormatter(row) {
   }
 }
 
+function downloadCsv() {
+  const filename = 'this_works.csv';
+  const content = 'name,city,ola';
+  const contentType = 'text/csv;charset=utf-8';
+
+  downloadFile(filename, content, contentType);
+}
+
+function downloadFile(filename, content, contentType) {
+  const blob = new Blob([content], { type: contentType });
+  const url = window.URL.createObjectURL(blob);
+
+  // const csvData = Papa.unparse(data);
+  // const csvUri = "data:text/csv;charset=utf-8,name,city,ola";
+  // const encodedUri = encodeURI(csvUri);
+
+  const $link = $('<a></a>')
+    .attr('href', url)
+    .attr('download', filename);
+
+  $link.appendTo('body');
+  $link[0].click();
+
+  $link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
+$('#download-table-btn').click(() => {
+  console.log('here');
+  downloadCsv();
+});
+
 $('[data-import]').click((event) => {
   const dataTable = $(event.target).data('table');
   const dataFileInput = $(event.target).data('file-input');
