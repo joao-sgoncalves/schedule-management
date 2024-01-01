@@ -26,33 +26,48 @@
     <div class="container">
       <div id="codemirror-table"></div>
       <textarea id="codemirror-test"></textarea>
-      
-      <button
-        id="download-table-btn"
-        class="btn btn-outline-primary"
-        type="button"
-        data-bs-toggle="tooltip"
-        data-bs-title="Descarregar tabela"
-      >
-        <i class="bi bi-download"></i>
-      </button>
 
       <!-- Quality Criteria Table -->
-      <div class="d-inline-block my-3">
+      <div id="criteria-container" class="table-container d-inline-block mw-100 my-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
-          <h5 class="mb-0">Critérios de Qualidade</h5>
-          <button
-            id="add-criteria-btn"
-            class="btn btn-outline-success"
-            type="button"
-            data-bs-toggle="tooltip"
-            data-bs-title="Adicionar critério"
-          >
-            <i class="bi bi-plus"></i>
-          </button>
+          <h5 class="table-name mb-0">Critérios de Qualidade</h5>
+          <div class="d-flex">
+            <button
+              class="upload-table-btn btn btn-outline-primary me-2"
+              type="button"
+              data-bs-toggle="tooltip"
+              data-bs-title="Carregar tabela"
+            >
+              <i class="bi bi-upload"></i>
+            </button>
+            <input
+              class="upload-table-input"
+              type="file"
+              accept="application/json"
+              hidden
+            >
+            <button
+              class="download-table-btn btn btn-outline-primary me-2"
+              type="button"
+              data-bs-toggle="tooltip"
+              data-bs-title="Descarregar tabela"
+              data-file-ext="json"
+            >
+              <i class="bi bi-download"></i>
+            </button>
+            <button
+              id="add-criteria-btn"
+              class="btn btn-outline-success"
+              type="button"
+              data-bs-toggle="tooltip"
+              data-bs-title="Adicionar critério"
+            >
+              <i class="bi bi-plus"></i>
+            </button>
+          </div>
         </div>
 
-        <div id="criteria-table" class="mw-100"></div>
+        <div id="criteria-table" class="custom-table mw-100"></div>
       </div>
 
       <!-- Room Tables -->

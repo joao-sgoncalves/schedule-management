@@ -1,17 +1,21 @@
 // TODO: Ensure every table has an ID (the ID of the container maybe (?))
 
+const parseMetas = {};
+const tables = {};
 const criteriaTable = createCriteriaTable();
-const classTables = [];
-const roomTables = [];
 
 const variablesRegexp = /\[(.+?)\]/g
+
+const classTables = [];
+const roomTables = [];
 
 $(document).ready(() => {
   $('[data-bs-toggle="tooltip"]').tooltip({ trigger: 'hover' });
 });
 
 function createCriteriaTable() {
-  const selector = '#criteria-table';
+  const containerId = 'criteria-container';
+  const $table = $(`#${containerId} .custom-table`);
   
   const columns = getCriteriaColumns();
   const data = getLocalCriteria() || config.defaultCriteria;
@@ -22,10 +26,13 @@ function createCriteriaTable() {
     maxHeight: '50vh',
     layout: 'fitDataTable',
     layoutColumnsOnNewData: true,
-    placeholder: "Sem Dados",
+    placeholder: 'Sem Dados',
   };
 
-  return new Tabulator(selector, options);
+  const table = new Tabulator($table[0], options);
+  tables[containerId] = table;
+
+  return table;
 }
 
 function getCriteriaColumns() {
@@ -210,7 +217,7 @@ $('#classes-input').change((event) => {
     const roomsSelect = `
       <select
         id="${roomsSelectId}"
-        class="table-names-select form-select w-auto me-3"
+        class="table-names-select form-select w-auto"
         aria-label="Selecionar tabela de salas"
       >
         ${roomsSelectOptions.join('\n')}
@@ -222,22 +229,45 @@ $('#classes-input').change((event) => {
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div class="table-full-name d-flex align-items-center"><h5 class="table-id mb-0">${tableNumber}</h5><h5 class="mb-0 mx-1"> - </h5><h5 class="table-name-heading table-name mb-0">${filenameWithoutExt}</h5></div>
           <div class="d-flex">
-            <div class="d-flex align-items-center">
+            <div class="d-flex align-items-center me-3">
               <label class="form-label mb-0 me-2" for="${roomsSelectId}">Tabela de salas:</label>
               ${roomsSelect}
             </div>
             <button
+              class="upload-table-btn btn btn-outline-primary me-2"
+              type="button"
+              data-bs-toggle="tooltip"
+              data-bs-title="Carregar tabela"
+            >
+              <i class="bi bi-upload"></i>
+            </button>
+            <input
+              class="upload-table-input"
+              type="file"
+              accept="text/csv"
+              hidden
+            >
+            <button
+              class="download-table-btn btn btn-outline-primary me-2"
+              type="button"
+              data-bs-toggle="tooltip"
+              data-bs-title="Descarregar tabela"
+              data-file-ext="csv"
+            >
+              <i class="bi bi-download"></i>
+            </button>
+            <button
               class="btn btn-outline-danger delete-table-btn"
               type="button"
               data-bs-toggle="tooltip"
-              data-bs-title="Remover tabela de horário"
+              data-bs-title="Remover tabela"
             >
               <i class="bi bi-trash-fill"></i>
             </button>
           </div>
         </div>
 
-        <div id="${tableId}" class="mw-100"></div>
+        <div id="${tableId}" class="custom-table mw-100"></div>
       </div>
     `);
 
@@ -270,17 +300,42 @@ $('#rooms-input').change((event) => {
       <div id="${containerId}" class="table-container d-inline-block mw-100 mb-3">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div class="table-full-name d-flex align-items-center"><h5 class="table-id mb-0">${tableNumber}</h5><h5 class="mb-0 mx-1"> - </h5><h5 class="table-name-heading table-name mb-0">${filenameWithoutExt}</h5></div>
-          <button
-            class="delete-table-btn btn btn-outline-danger delete-rooms-btn"
-            type="button"
-            data-bs-toggle="tooltip"
-            data-bs-title="Remover tabela de salas"
-          >
-            <i class="bi bi-trash-fill"></i>
-          </button>
+          <div class="d-flex">
+            <button
+              class="upload-table-btn btn btn-outline-primary me-2"
+              type="button"
+              data-bs-toggle="tooltip"
+              data-bs-title="Carregar tabela"
+            >
+              <i class="bi bi-upload"></i>
+            </button>
+            <input
+              class="upload-table-input"
+              type="file"
+              accept="text/csv"
+              hidden
+            >
+            <button
+              class="download-table-btn btn btn-outline-primary me-2"
+              type="button"
+              data-bs-toggle="tooltip"
+              data-bs-title="Descarregar tabela"
+              data-file-ext="csv"
+            >
+              <i class="bi bi-download"></i>
+            </button>
+            <button
+              class="delete-table-btn btn btn-outline-danger delete-rooms-btn"
+              type="button"
+              data-bs-toggle="tooltip"
+              data-bs-title="Remover tabela"
+            >
+              <i class="bi bi-trash-fill"></i>
+            </button>
+          </div>
         </div>
 
-        <div id="${tableId}" class="mw-100"></div>
+        <div id="${tableId}" class="custom-table mw-100"></div>
       </div>
     `);
 
@@ -326,24 +381,69 @@ $('body').on('blur', '.table-name-input', (event) => {
   updateTableNameSelects(`#${containerId}`, dataNameSelects);
 });
 
-$('body').on('click', '.delete-table-btn', (event) => {
+$('body').on('click', '.upload-table-btn', (event) => {
   const $target = $(event.target);
-  const $tableContainer = $target.closest('.table-container');  
+  const $tableContainer = $target.closest('.table-container');
+
+  const $uploadTableInput = $tableContainer.find('.upload-table-input');
+  $uploadTableInput[0].click();
+});
+
+$('body').on('change', '.upload-table-input', (event) => {
+  const $target = $(event.target);
+  const file = $target.prop('files')[0];
+
+  const $tableContainer = $target.closest('.table-container');
   const containerId = $tableContainer.attr('id');
 
-  const $tooltips = $(`#${containerId} [data-bs-toggle="tooltip"]`);
+  // loadTableFromJson(file, `#${containerId} .custom-table`);
+  parse(file, `#${containerId} .custom-table`);
+
+  $target.val(null);
+});
+
+$('body').on('click', '.download-table-btn', (event) => {
+  const $target = $(event.target);
+  const $downloadTableBtn = $target.closest('.download-table-btn');
+  const dataFileExtension = $downloadTableBtn.data('file-ext');
+
+  const $tableContainer = $downloadTableBtn.closest('.table-container');
+  const containerId = $tableContainer.attr('id');
+
+  const tableId = $tableContainer.find('.table-id').text();
+  const tableName = $tableContainer.find('.table-name').text();
+  const filename = `${tableName || tableId}.${dataFileExtension}`;
+
+  const table = tables[containerId];
+  const data = table.getData();
+
+  if (dataFileExtension === 'csv') {
+    const parseMeta = parseMetas[containerId];
+    const config = {
+      delimiter: parseMeta.delimiter,
+      header: true,
+      linebreak: parseMeta.newline,
+      columns: parseMeta.fields,
+    };
+
+    downloadCsv(filename, data, config);
+  } else {
+    downloadJson(filename, data);
+  }
+});
+
+$('body').on('click', '.delete-table-btn', (event) => {
+  const $target = $(event.target);
+  const $tableContainer = $target.closest('.table-container');
+  const containerId = $tableContainer.attr('id');
+
+  const $tooltips = $tableContainer.find('[data-bs-toggle="tooltip"]');
   $tooltips.tooltip('dispose');
 
   $tableContainer.remove();
 
-  // const tooltipsSelector = `#${containerId} [data-bs-toggle="tooltip"]`;
-  // $(tooltipsSelector).tooltip({ trigger: 'hover' });
-
-    //   $(tooltipsSelector).tooltip('dispose');
-  //   $(`#${containerId}`).remove();
-
-  //   const tableIndex = roomTables.findIndex((table) => table.element.id === tableId);
-  //   roomTables.splice(tableIndex, 1);
+  delete parseMetas[containerId];
+  delete tables[containerId];
 });
 
 function getTableInfos(selector) {
@@ -403,16 +503,26 @@ function parse(file, tableSelector) {
     worker: true,
     header: true,
     complete: (results) => {
-      const fields = results.meta.fields;
+      const meta = results.meta;
       const data = results.data;
       const errors = results.errors;
 
-      loadTable(tableSelector, fields, data, errors);
+      const $table = $(tableSelector);
+      const $tableContainer = $table.closest('.table-container');
+      const containerId = $tableContainer.attr('id');
+
+      parseMetas[containerId] = meta;
+
+      loadTable(tableSelector, meta.fields, data, errors);
     },
     error: (err) => {
       console.error(`Error parsing file '${file.name}'`, err);
     },
   });
+}
+
+function loadTableFromJson(file, tableSelector) {
+  console.log('file:', file);
 }
 
 function loadTable(selector, fields, data, errors) {
@@ -440,7 +550,7 @@ function loadTable(selector, fields, data, errors) {
   });
 
   if (isTableCreated(selector)) {
-    // updateTable(selector, columns, tableData);
+    updateTable(selector, columns, tableData);
   } else {
     createTable(selector, columns, tableData);
   }
@@ -464,7 +574,11 @@ function createTable(selector, columns, data) {
     placeholder: 'Sem Dados',
   });
 
-  classTables.push(table);
+  const $table = $(selector);
+  const $tableContainer = $table.closest('.table-container');
+  const containerId = $tableContainer.attr('id');
+
+  tables[containerId] = table;
 
   table.on('cellEdited', (cell) => {
     const table = cell.getTable();
@@ -495,10 +609,15 @@ function createTable(selector, columns, data) {
   });
 }
 
-// function updateTable(selector, columns, data) {
-//   $(selector).tabulator('setColumns', columns);
-//   $(selector).tabulator('setData', data);
-// }
+function updateTable(selector, columns, data) {
+  const $table = $(selector);
+  const $tableContainer = $table.closest('.table-container');
+  const containerId = $tableContainer.attr('id');
+  const table = tables[containerId];
+
+  table.setColumns(columns);
+  table.setData(data);
+}
 
 function getColumns(fields) {
   const columns = fields.map((field) => {
@@ -711,21 +830,23 @@ function rowFormatter(row) {
   }
 }
 
-function downloadCsv() {
-  const filename = 'this_works.csv';
-  const content = 'name,city,ola';
+function downloadCsv(filename, content, config) {
+  const csvContent = Papa.unparse(content, config);
   const contentType = 'text/csv;charset=utf-8';
 
-  downloadFile(filename, content, contentType);
+  downloadFile(filename, csvContent, contentType);
+}
+
+function downloadJson(filename, content) {
+  const jsonContent = JSON.stringify(content);
+  const contentType = 'application/json;charset=utf-8';
+
+  downloadFile(filename, jsonContent, contentType);
 }
 
 function downloadFile(filename, content, contentType) {
   const blob = new Blob([content], { type: contentType });
   const url = window.URL.createObjectURL(blob);
-
-  // const csvData = Papa.unparse(data);
-  // const csvUri = "data:text/csv;charset=utf-8,name,city,ola";
-  // const encodedUri = encodeURI(csvUri);
 
   const $link = $('<a></a>')
     .attr('href', url)
@@ -737,11 +858,6 @@ function downloadFile(filename, content, contentType) {
   $link.remove();
   window.URL.revokeObjectURL(url);
 }
-
-$('#download-table-btn').click(() => {
-  console.log('here');
-  downloadCsv();
-});
 
 $('[data-import]').click((event) => {
   const dataTable = $(event.target).data('table');
