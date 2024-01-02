@@ -6,7 +6,6 @@ const criteriaTable = createCriteriaTable();
 
 const variablesRegexp = /\[(.+?)\]/g
 
-const classTables = [];
 const roomTables = [];
 
 $(document).ready(() => {
@@ -67,6 +66,7 @@ function getCriteriaColumns() {
       editorParams: {
         values: ['AVG', 'MAX', 'MIN', 'SUM', 'CONCAT', 'COUNT', 'UNIQUE'],
         clearable: true,
+        placeholderEmpty: 'Sem Resultados',
         autocomplete: true,
         allowEmpty: true,
         listOnEmpty: true,
@@ -88,7 +88,11 @@ function getCriteriaColumns() {
 
         row.delete();
 
-        classTables.forEach((table) => {
+        $('#class-tables').children('.table-container').each((_index, container) => {
+          const $container = $(container);
+          const containerId = $container.attr('id');
+          const table = tables[containerId];
+
           const columns = table.getColumns();
           const criteriaIndex = columns.findIndex((column) => column.getField() === criteriaField);
 
@@ -127,14 +131,22 @@ criteriaTable.on('cellEdited', (cell) => {
   const criteriaField = `criteria-${data.id}`;
 
   if (field === 'name') {
-    classTables.forEach((table) => {
+    $('#class-tables').children('.table-container').each((_index, container) => {
+      const $container = $(container);
+      const containerId = $container.attr('id');
+
+      const table = tables[containerId];
       const criteriaColumn = table.getColumn(criteriaField);
 
       criteriaColumn.updateDefinition({ title: value });
       criteriaColumn.scrollTo();
     });
   } else if (field === 'expression') {
-    classTables.forEach((table) => {
+    $('#class-tables').children('.table-container').each((_index, container) => {
+      const $container = $(container);
+      const containerId = $container.attr('id');
+
+      const table = tables[containerId];
       const criteriaColumn = table.getColumn(criteriaField);
       const classesData = table.getData();
 
@@ -147,7 +159,11 @@ criteriaTable.on('cellEdited', (cell) => {
       criteriaColumn.scrollTo();
     });
   } else if (field === 'aggregator') {
-    classTables.forEach((table) => {
+    $('#class-tables').children('.table-container').each((_index, container) => {
+      const $container = $(container);
+      const containerId = $container.attr('id');
+
+      const table = tables[containerId];
       const criteriaColumn = table.getColumn(criteriaField);
 
       criteriaColumn.updateDefinition({ bottomCalc: value.toLowerCase() });
@@ -157,14 +173,11 @@ criteriaTable.on('cellEdited', (cell) => {
 });
 
 $('#add-criteria-btn').click(() => {
-  const data = criteriaTable.getData();
-  const lastRowData = data.at(-1);
-  const newRowData = { 'id': (lastRowData?.id ?? 0) + 1 };
+  $('#class-tables').children('.table-container').each((_index, container) => {
+    const $container = $(container);
+    const containerId = $container.attr('id');
 
-  criteriaTable.addRow(newRowData);
-  criteriaTable.scrollToRow(newRowData.id);
-
-  classTables.forEach((table) => {
+    const table = tables[containerId];
     const criteriaField = `criteria-${newRowData.id}`;
 
     table.addColumn({
@@ -192,9 +205,12 @@ function qualityMutator(value, data, component) {
 $('#classes-input').change((event) => {
   const files = Array.from(event.target.files);
 
-  const lastTable = classTables.at(-1);
-  const lastTableId = lastTable?.element.id;
-  const lastTableNumber = parseInt(lastTableId?.split('-').pop() ?? 0, 10);
+  const $classTables = $('#class-tables');
+  const $lastTableContainer = $classTables.find('.table-container:last');
+  
+  const $lastTableId = $lastTableContainer.find('.table-id');
+  const lastTableId = $lastTableId.text();
+  const lastTableNumber = parseInt(lastTableId ? lastTableId : 0, 10);
 
   files.forEach((file, index) => {
     const tableNumber = lastTableNumber + index + 1;
@@ -207,22 +223,27 @@ $('#classes-input').change((event) => {
     const filenameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
 
     const roomTableInfos = getTableInfos('#room-tables');
-    
-    const roomsSelectOptions = roomTableInfos.map((info) => {
-      return `<option>${info.name}</option>`;
+
+    const $roomsSelect = $('<select></select>')
+      .attr('id', roomsSelectId)
+      .addClass('table-names-select form-select w-auto')
+      .attr('aria-label', 'Selecionar tabela de salas');
+
+    const $defaultOption = $('<option></option>')
+      .attr('value', '-1')
+      .text('-- Escolha uma opção --');
+
+    $roomsSelect.append($defaultOption);
+
+    roomTableInfos.forEach((info) => {
+      const $nameOption = $('<option></option>')
+        .attr('value', info.id)
+        .text(info.fullName);
+
+      $roomsSelect.append($nameOption);
     });
 
-    roomsSelectOptions.unshift('<option value="-1" selected>-- Escolha uma opção --</option>');
-
-    const roomsSelect = `
-      <select
-        id="${roomsSelectId}"
-        class="table-names-select form-select w-auto"
-        aria-label="Selecionar tabela de salas"
-      >
-        ${roomsSelectOptions.join('\n')}
-      </select>
-    `;
+    const roomsSelectHtml = $roomsSelect.prop('outerHTML');
 
     $('#class-tables').append(`
       <div id="${containerId}" class="table-container d-inline-block mw-100 mb-3">
@@ -231,7 +252,7 @@ $('#classes-input').change((event) => {
           <div class="d-flex">
             <div class="d-flex align-items-center me-3">
               <label class="form-label mb-0 me-2" for="${roomsSelectId}">Tabela de salas:</label>
-              ${roomsSelect}
+              ${roomsSelectHtml}
             </div>
             <button
               class="upload-table-btn btn btn-outline-primary me-2"
@@ -283,9 +304,12 @@ $('#classes-input').change((event) => {
 $('#rooms-input').change((event) => {
   const files = Array.from(event.target.files);
 
-  const lastTable = roomTables.at(-1);
-  const lastTableId = lastTable?.element.id;
-  const lastTableNumber = parseInt(lastTableId?.split('-').pop() ?? 0, 10);
+  const $roomTables = $('#room-tables');
+  const $lastTableContainer = $roomTables.find('.table-container:last');
+  
+  const $lastTableId = $lastTableContainer.find('.table-id');
+  const lastTableId = $lastTableId.text();
+  const lastTableNumber = parseInt(lastTableId ? lastTableId : 0, 10);
 
   files.forEach((file, index) => {
     const tableNumber = lastTableNumber + index + 1;
@@ -345,6 +369,11 @@ $('#rooms-input').change((event) => {
     parse(file, `#${tableId}`);
   });
 
+  const roomsContainerId = $roomTables.attr('id');
+  const dataNameSelects = $roomTables.data('name-selects');
+
+  updateTableNameSelects(`#${roomsContainerId}`, dataNameSelects);
+
   $(event.target).val(null);
 });
 
@@ -371,8 +400,6 @@ $('body').on('blur', '.table-name-input', (event) => {
 
   $target.replaceWith($heading);
 
-  // TODO: Move this inside updateTableNameSelects (?)
-  // TODO: Directly call find on $tablesContainer instead of passing the containerId (?)
   const $tablesContainer = $heading.closest('.tables-container');
   
   const containerId = $tablesContainer.attr('id');
@@ -396,8 +423,11 @@ $('body').on('change', '.upload-table-input', (event) => {
   const $tableContainer = $target.closest('.table-container');
   const containerId = $tableContainer.attr('id');
 
-  // loadTableFromJson(file, `#${containerId} .custom-table`);
-  parse(file, `#${containerId} .custom-table`);
+  if (containerId === 'criteria-container') {
+    updateCriteriaTable(containerId, file);
+  } else {
+    parse(file, `#${containerId} .custom-table`);
+  }
 
   $target.val(null);
 });
@@ -416,6 +446,7 @@ $('body').on('click', '.download-table-btn', (event) => {
 
   const table = tables[containerId];
   const data = table.getData();
+  const dataToDownload = data.filter((row) => row.id > 0);
 
   if (dataFileExtension === 'csv') {
     const parseMeta = parseMetas[containerId];
@@ -426,9 +457,9 @@ $('body').on('click', '.download-table-btn', (event) => {
       columns: parseMeta.fields,
     };
 
-    downloadCsv(filename, data, config);
+    downloadCsv(filename, dataToDownload, config);
   } else {
-    downloadJson(filename, data);
+    downloadJson(filename, dataToDownload);
   }
 });
 
@@ -436,6 +467,7 @@ $('body').on('click', '.delete-table-btn', (event) => {
   const $target = $(event.target);
   const $tableContainer = $target.closest('.table-container');
   const containerId = $tableContainer.attr('id');
+  const $tablesContainer = $tableContainer.closest('.tables-container');
 
   const $tooltips = $tableContainer.find('[data-bs-toggle="tooltip"]');
   $tooltips.tooltip('dispose');
@@ -444,6 +476,26 @@ $('body').on('click', '.delete-table-btn', (event) => {
 
   delete parseMetas[containerId];
   delete tables[containerId];
+  
+  const tablesContainerId = $tablesContainer.attr('id');
+  const dataNameSelects = $tablesContainer.data('name-selects');
+
+  updateTableNameSelects(`#${tablesContainerId}`, dataNameSelects);
+});
+
+$('body').on('click', '.add-row-btn', (event) => {
+  const $target = $(event.target);
+  const $tableContainer = $target.closest('.table-container');
+  const containerId = $tableContainer.attr('id');
+
+  const table = tables[containerId];
+  const data = table.getData();
+
+  const lastRowData = data.at(-1);
+  const newRowData = { 'id': (lastRowData?.id ?? 0) + 1 };
+
+  table.addRow(newRowData);
+  table.scrollToRow(newRowData.id);
 });
 
 function getTableInfos(selector) {
@@ -521,8 +573,23 @@ function parse(file, tableSelector) {
   });
 }
 
-function loadTableFromJson(file, tableSelector) {
-  console.log('file:', file);
+function updateCriteriaTable(containerId, file) {
+  const table = tables[containerId];
+
+  const reader = new FileReader();
+
+  reader.onload = (event) => {
+    const jsonContent = event.target.result;
+    const data = JSON.parse(jsonContent);
+
+    table.setData(data);
+  };
+
+  reader.onerror = () => {
+    console.error(`Error reading file '${file.name}'`);
+  };
+
+  reader.readAsText(file, 'utf-8');
 }
 
 function loadTable(selector, fields, data, errors) {
@@ -759,6 +826,7 @@ function getColumn(title, field) {
     editorParams: {
       valuesLookup,
       clearable: true,
+      placeholderEmpty: 'Sem Resultados',
       autocomplete: true,
       allowEmpty: true,
       listOnEmpty: true,
@@ -859,48 +927,36 @@ function downloadFile(filename, content, contentType) {
   window.URL.revokeObjectURL(url);
 }
 
-$('[data-import]').click((event) => {
-  const dataTable = $(event.target).data('table');
-  const dataFileInput = $(event.target).data('file-input');
-  const file = $(dataFileInput).prop('files')[0];
+function autoAssignTableFields() {
+  const table = tables['classes-container-1'];
+  const tableId = table.element.id;
+  const tableType = tableId.split('-', 1)[0];
 
-  Papa.parse(file, {
-    worker: true,
-    header: true,
-    complete: (results) => {
-      const data = results.data;
-      const fields = results.meta.fields;
-      const errors = results.errors;
+  const columns = table.getColumns();
+  const data = table.getData();
 
-      loadTable(dataTable, fields, data, errors);
-    },
-    error: (err) => {
-      console.error('Error parsing file', err);
-    },
+  const fieldsRow = data.find((row) => row.id === 0);
+  const fields = config.tableFields[tableType];
+  const updatedFieldsRow = { id: fieldsRow.id };
+
+  columns.forEach((column) => {
+    const definition = column.getDefinition();
+    const title = definition.title;
+    const field = definition.field;
+    const fieldValue = fieldsRow[field];
+
+    if (['id', 'errors'].includes(field) || fieldValue) {
+      return;
+    }
+
+    const fieldName = Object.keys(fields).find((name) => {
+      return fields[name] === title;
+    });
+
+    if (fieldName) {
+      updatedFieldsRow[field] = fields[fieldName];
+    }
   });
-});
 
-$('[data-preview]').click((event) => {
-  const dataTable = $(event.target).data('table');
-  const dataFileInput = $(event.target).data('file-input');
-  const dataRowsInput = $(event.target).data('rows-input');
-
-  const file = $(dataFileInput).prop('files')[0];
-  const preview = parseInt($(dataRowsInput).val(), 10);
-
-  Papa.parse(file, {
-    worker: true,
-    header: true,
-    preview: preview + 1,
-    complete: (results) => {
-      const data = results.data;
-      const fields = results.meta.fields;
-      const errors = results.errors;
-
-      loadTable(dataTable, fields, data, errors);
-    },
-    error: (err) => {
-      console.error('Error parsing file', err);
-    },
-  });
-});
+  table.updateData([updatedFieldsRow]);
+}
