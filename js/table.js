@@ -1,12 +1,10 @@
-// TODO: Ensure every table has an ID (the ID of the container maybe (?))
-
 const parseMetas = {};
 const tables = {};
 const criteriaTable = createCriteriaTable();
 
-const variablesRegexp = /\[(.+?)\]/g
-
-const roomTables = [];
+const variablesRegexp = /(\w+)\["([^"]+)"\]/g;
+const diacriticsRegexp = /\p{Diacritic}/gu;
+const extraSpacesRegexp = /\s+/g;
 
 $(document).ready(() => {
   $('[data-bs-toggle="tooltip"]').tooltip({ trigger: 'hover' });
@@ -26,6 +24,7 @@ function createCriteriaTable() {
     layout: 'fitDataTable',
     layoutColumnsOnNewData: true,
     placeholder: 'Sem Dados',
+    resizableRows: true,
   };
 
   const table = new Tabulator($table[0], options);
@@ -83,22 +82,7 @@ function getCriteriaColumns() {
       },
       cellClick: (_event, cell) => {
         const row = cell.getRow();
-        const data = cell.getData();
-        const criteriaField = `criteria-${data.id}`;
-
         row.delete();
-
-        $('#class-tables').children('.table-container').each((_index, container) => {
-          const $container = $(container);
-          const containerId = $container.attr('id');
-          const table = tables[containerId];
-
-          const columns = table.getColumns();
-          const criteriaIndex = columns.findIndex((column) => column.getField() === criteriaField);
-
-          table.deleteColumn(criteriaField);
-          columns[criteriaIndex - 1].scrollTo();
-        });
       },
       hozAlign: 'center',
       vertAlign: 'middle',
@@ -112,6 +96,47 @@ criteriaTable.on('dataLoaded', (data) => {
 
 criteriaTable.on('dataChanged', (data) => {
   updateLocalCriteria(data);
+});
+
+criteriaTable.on('rowAdded', (row) => {
+  const rowId = row.getIndex();
+
+  $('#class-tables').children('.table-container').each((_index, container) => {
+    const $container = $(container);
+    const containerId = $container.attr('id');
+
+    const table = tables[containerId];
+    const criteriaField = `criteria-${rowId}`;
+
+    table.addColumn({
+      field: criteriaField,
+      mutator: (value, data, _type, _params, component) => {
+        return qualityMutator(value, data, component);
+      },
+      headerSortTristate: true,
+      vertAlign: 'middle',
+    }).then(() => {
+      table.scrollToColumn(criteriaField);
+    });
+  });
+});
+
+criteriaTable.on('rowDeleted', (row) => {
+  const rowId = row.getIndex();
+  const criteriaField = `criteria-${rowId}`;
+
+  $('#class-tables').children('.table-container').each((_index, container) => {
+    const $container = $(container);
+    const containerId = $container.attr('id');
+    const table = tables[containerId];
+
+    const columns = table.getColumns();
+    const criteriaIndex = columns.findIndex((column) => column.getField() === criteriaField);
+    const previousColumnField = columns[criteriaIndex - 1].getField();
+
+    table.deleteColumn(criteriaField)
+      .then(() => table.scrollToColumn(previousColumnField));
+  });
 });
 
 function getLocalCriteria() {
@@ -134,12 +159,10 @@ criteriaTable.on('cellEdited', (cell) => {
     $('#class-tables').children('.table-container').each((_index, container) => {
       const $container = $(container);
       const containerId = $container.attr('id');
-
       const table = tables[containerId];
-      const criteriaColumn = table.getColumn(criteriaField);
 
-      criteriaColumn.updateDefinition({ title: value });
-      criteriaColumn.scrollTo();
+      table.updateColumnDefinition(criteriaField, { title: value })
+        .then(() => table.scrollToColumn(criteriaField));
     });
   } else if (field === 'expression') {
     $('#class-tables').children('.table-container').each((_index, container) => {
@@ -155,40 +178,19 @@ criteriaTable.on('cellEdited', (cell) => {
         [criteriaField]: qualityMutator(row[criteriaField], row, criteriaColumn),
       }));
 
-      table.updateData(updatedData);
-      criteriaColumn.scrollTo();
+      table.updateData(updatedData)
+        .then(() => table.scrollToColumn(criteriaField));
     });
   } else if (field === 'aggregator') {
     $('#class-tables').children('.table-container').each((_index, container) => {
       const $container = $(container);
       const containerId = $container.attr('id');
-
       const table = tables[containerId];
-      const criteriaColumn = table.getColumn(criteriaField);
 
-      criteriaColumn.updateDefinition({ bottomCalc: value.toLowerCase() });
-      criteriaColumn.scrollTo();
+      table.updateColumnDefinition(criteriaField, { bottomCalc: value.toLowerCase() })
+        .then(() => table.scrollToColumn(criteriaField));
     });
   }
-});
-
-$('#add-criteria-btn').click(() => {
-  $('#class-tables').children('.table-container').each((_index, container) => {
-    const $container = $(container);
-    const containerId = $container.attr('id');
-
-    const table = tables[containerId];
-    const criteriaField = `criteria-${newRowData.id}`;
-
-    table.addColumn({
-      field: criteriaField,
-      mutator: (value, data, _type, _params, component) => {
-        return qualityMutator(value, data, component);
-      },
-    });
-
-    table.scrollToColumn(criteriaField);
-  });
 });
 
 function qualityMutator(value, data, component) {
@@ -494,8 +496,8 @@ $('body').on('click', '.add-row-btn', (event) => {
   const lastRowData = data.at(-1);
   const newRowData = { 'id': (lastRowData?.id ?? 0) + 1 };
 
-  table.addRow(newRowData);
-  table.scrollToRow(newRowData.id);
+  table.addRow(newRowData)
+    .then(() => table.scrollToRow(newRowData.id));
 });
 
 function getTableInfos(selector) {
@@ -632,6 +634,7 @@ function createTable(selector, columns, data) {
     columns,
     rowFormatter,
     frozenRows: 1,
+    // height: '500px',
     maxHeight: '50vh',
     layout: 'fitDataTable',
     layoutColumnsOnNewData: true,
@@ -639,6 +642,7 @@ function createTable(selector, columns, data) {
     scrollToColumnPosition: 'middle',
     scrollToColumnIfVisible: false,
     placeholder: 'Sem Dados',
+    resizableRows: true,
   });
 
   const $table = $(selector);
@@ -647,33 +651,57 @@ function createTable(selector, columns, data) {
 
   tables[containerId] = table;
 
-  table.on('cellEdited', (cell) => {
-    const table = cell.getTable();
-    const data = table.getData();
-
-    const cellField = cell.getField();
-    const cellValue = cell.getValue();
-
-    const tableId = table.element.id;
-    const tableType = tableId.split('-', 1)[0];
-
-    const fields = config.tableFields[tableType];
-    const fieldName = Object.keys(fields).find((name) => {
-      return fields[name] === cellValue;
-    });
-
-    const newData = data.map((row) => ({
-      id: row.id,
-      [fieldName]: row[cellField],
-    }));
-
-    table.updateData(newData);
-
-    const column = cell.getColumn();
-    column.updateDefinition({ field: fieldName });
-
-    column.scrollTo();
+  table.on('tableBuilt', () => {
+    autoAssignTableFields(containerId);
+    addCriteriaColumns(containerId);
   });
+
+  table.on('dataProcessed', () => {
+    if (!table.initialized) {
+      return;
+    }
+
+    autoAssignTableFields(containerId);
+    addCriteriaColumns(containerId);
+  });
+
+  table.on('cellEdited', (cell) => cellEdited(cell));
+}
+
+function cellEdited(cell, scrollToColumn = true) {
+  const table = cell.getTable();
+  const data = table.getData();
+
+  const column = cell.getColumn();
+  const definition = column.getDefinition();
+  const columnTitle = definition.title;
+
+  const cellField = cell.getField();
+  const cellValue = cell.getValue();
+
+  const tableId = table.element.id;
+  const tableType = tableId.split('-', 1)[0];
+
+  const fields = config.tableFields[tableType];
+  const fieldName = Object.keys(fields).find((name) => {
+    return fields[name] === cellValue;
+  }) ?? columnTitle;
+
+  const newData = data.map((row) => ({
+    id: row.id,
+    [cellField]: undefined,
+    [fieldName]: row[cellField],
+  }));
+
+  table.updateData(newData)
+    .then(() => {
+      table.updateColumnDefinition(cellField, { field: fieldName })
+        .then(() => {
+          if (scrollToColumn) {
+            table.scrollToColumn(fieldName);
+          }
+        });
+    });
 }
 
 function updateTable(selector, columns, data) {
@@ -700,7 +728,7 @@ function getColumns(fields) {
   };
   columns.unshift(idColumn);
 
-  const errorsColumn = getColumn('Errors', 'errors');
+  const errorsColumn = getColumn('Erros', 'errors');
   columns.push(errorsColumn);
 
   // columns.push({
@@ -927,36 +955,181 @@ function downloadFile(filename, content, contentType) {
   window.URL.revokeObjectURL(url);
 }
 
-function autoAssignTableFields() {
-  const table = tables['classes-container-1'];
+// TODO: Do this on the table that is not yet built, to improve performance
+function autoAssignTableFields(containerId) {
+  const table = tables[containerId];
   const tableId = table.element.id;
   const tableType = tableId.split('-', 1)[0];
-
   const columns = table.getColumns();
-  const data = table.getData();
 
-  const fieldsRow = data.find((row) => row.id === 0);
+  const fieldsRow = table.getRow(0);
+  const fieldsData = fieldsRow.getData();
   const fields = config.tableFields[tableType];
-  const updatedFieldsRow = { id: fieldsRow.id };
+  const updatedFieldsData = { id: fieldsData.id };
 
   columns.forEach((column) => {
     const definition = column.getDefinition();
     const title = definition.title;
     const field = definition.field;
-    const fieldValue = fieldsRow[field];
+    const fieldValue = fieldsData[field];
 
     if (['id', 'errors'].includes(field) || fieldValue) {
       return;
     }
 
+    const titleComparisonStr = autoAssignStringConversion(title);
     const fieldName = Object.keys(fields).find((name) => {
-      return fields[name] === title;
+      const fieldComparisonStr = autoAssignStringConversion(fields[name]);
+      return fieldComparisonStr === titleComparisonStr;
     });
 
     if (fieldName) {
-      updatedFieldsRow[field] = fields[fieldName];
+      updatedFieldsData[field] = fields[fieldName];
     }
   });
 
-  table.updateData([updatedFieldsRow]);
+  table.updateData([updatedFieldsData])
+    .then(() => {
+      const fieldCells = fieldsRow.getCells();
+
+      fieldCells.forEach((cell) => {
+        const cellField = cell.getField();
+
+        if (cellField === 'id') {
+          return;
+        }
+
+        if (!Object.keys(updatedFieldsData).includes(cellField)) {
+          return;
+        }
+
+        cellEdited(cell, false);
+      });
+    });
 }
+
+// TODO: Do this on the table that is not yet built, to improve performance
+function addCriteriaColumns(containerId) {
+  const table = tables[containerId];
+  const tableId = table.element.id;
+  const tableType = tableId.split('-', 1)[0];
+
+  if (tableType !== 'classes') {
+    return;
+  }
+
+  const criteriaData = criteriaTable.getData();
+
+  criteriaData.forEach((row) => {
+    const criteriaField = `criteria-${row.id}`;
+    
+    const columnDefinition = {
+      field: criteriaField,
+      mutator: (value, data, _type, _params, component) => {
+        return qualityMutator(value, data, component);
+      },
+      headerSortTristate: true,
+      vertAlign: 'middle',
+    };
+
+    if (row.name) {
+      columnDefinition.title = row.name;
+    }
+
+    // TODO: Implement expression!
+
+    if (row.aggregator) {
+      columnDefinition.bottomCalc = row.aggregator.toLowerCase();
+    }
+
+    table.addColumn(columnDefinition);
+  });
+}
+
+function autoAssignStringConversion(str) {
+  let newStr = str.toLowerCase();
+  
+  newStr = withoutExtraSpaces(newStr);
+  newStr = withoutDiacritics(newStr);
+
+  return newStr;
+}
+
+function withoutExtraSpaces(str) {
+  return str.replace(extraSpacesRegexp, ' ').trim();
+}
+
+function withoutDiacritics(str) {
+  return str.normalize('NFD').replace(diacriticsRegexp, '');
+}
+
+function replaceExpression(expression, roomsContainerId, classesContainerId) {
+  const entities = {
+    'Aula': {
+      data: 'classData',
+      fields: config.tableFields.classes,
+      filledFields: getFilledFields(classesContainerId),
+    },
+    'Sala': {
+      data: 'roomData',
+      fields: config.tableFields.rooms,
+      filledFields: roomsContainerId ? getFilledFields(roomsContainerId) : undefined,
+    },
+  };
+  
+  const entityKeys = Object.keys(entities);
+  const errors = [];
+
+  const newExpression = expression.replace(variablesRegexp, replacer);
+
+  function replacer(variable, entity, field) {
+    if (!entityKeys.includes(entity)) {
+      errors.push(`Entidade '${entity}' não é válida. Utilize uma das seguintes entidades: ${entityKeys}`);
+      return variable;
+    }
+
+    if (entity === 'Sala' && !roomsContainerId) {
+      errors.push(`Entidade '${entity}' não pode ser usada sem especificar a tabela de salas associada.`);
+      return variable;
+    }
+
+    const entityFields = entities[entity].fields;
+    const fieldNames = Object.values(entityFields);
+    const filledFields = entities[entity].filledFields;
+    const convertedField = autoAssignStringConversion(field);
+  
+    if (!fieldNames.some((name) => autoAssignStringConversion(name) === convertedField)) {
+      errors.push(`Campo '${field}' não é válido para a entidade '${entity}'. Utilize um dos seguintes campos: ${fieldNames}`);
+      return variable;
+    }
+
+    if (!filledFields.some((field) => autoAssignStringConversion(field) === convertedField)) {
+      errors.push(`Campo '${field}' não está associado a qualquer coluna da tabela.`);
+      return variable;
+    }
+
+    // TODO: fieldName might change if we no longer change the field of the column
+    const dataName = entities[entity].data;
+    const fieldName = Object.keys(entityFields).find((key) => {
+      return autoAssignStringConversion(entityFields[key]) === convertedField;
+    });
+
+    return `${dataName}["${fieldName}"]`;
+  }
+
+  if (errors.length > 0) {
+    throw new Error(errors.join('\n'));
+  }
+
+  return newExpression;
+}
+
+function getFilledFields(containerId) {
+  const table = tables[containerId];
+  const fieldsRow = table.getRow(0);
+  const fieldsData = fieldsRow.getData();
+
+  return Object.values(fieldsData).filter((field) => field);
+}
+
+// TODO: Do we even need to update the field on the table? It is time-consuming and might not be needed
