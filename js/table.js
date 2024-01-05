@@ -193,15 +193,84 @@ criteriaTable.on('cellEdited', (cell) => {
   }
 });
 
-function qualityMutator(value, data, component) {
+function formatter(cell) {
+  const data = cell.getData();
+  const value = cell.getValue();
+
+  if (data.id === 0) {
+    return value;
+  }
+
+  const table = cell.getTable();
+  const tableData = table.getData();
+
+  const fieldsRow = tableData.find((row) => row.id === 0);
+  const field = cell.getField();
+  const expression = fieldsRow[field];
+
+  if (expression === undefined) {
+    return value;
+  }
+
+  const dataExpression = expression.replace(variablesRegexp, "data['$1']");
+  const cellElement = cell.getElement();
+
+  try {
+    eval(dataExpression);
+  } catch {
+    $(cellElement).addClass('table-danger');
+  }
+
+  return value;
+}
+
+function qualityMutator(value, classData, component) {
+  if (classData.id === 0) {
+    return value;
+  }
+
+  const classesTable = component.getTable();
   const field = component.getField();
 
+  const $classesTable = $(classesTable.element);
+  const $classesContainer = $classesTable.closest('.table-container');
+  const classesContainerId = $classesContainer.attr('id');
+
+  // TODO: Move this inside 'replaceExpression' function and only do it when there is the entity 'Sala'
+  // TODO: Throw an error if the room (Sala[]) is referenced but not found in rooms (roomData is undefined for this case)
+
+  const $tableNamesSelect = $classesContainer.find('.table-names-select');
+  const tableNameVal = $tableNamesSelect.val();
+
+  let roomsContainerId;
+  let roomsTable;
+  let roomData;
+
+  if (tableNameVal !== '-1') {
+    roomsContainerId = `rooms-container-${tableNameVal}`;
+    roomsTable = tables[roomsContainerId];
+
+    const roomsData = roomsTable.getData();
+    const convertedClassRoom = autoAssignStringConversion(classData.roomName);
+
+    roomData = roomsData.find((row) => autoAssignStringConversion(row.roomNameB) === convertedClassRoom);
+  }
+  
   const qualityData = criteriaTable.getData();
-  const criteriaData = qualityData.find((data) => data.id === field);
+  const criteriaData = qualityData.find((data) => `criteria-${data.id}` === field);
+  const expression = criteriaData.expression;
 
-  // use [Field] and [class.Field]
+  let newValue;
 
-  return eval(criteriaData.expression);
+  try {
+    const expressionWithVariables = replaceExpression(expression, roomsContainerId, classesContainerId);
+    newValue = eval(expressionWithVariables);
+  } catch (err) {
+    newValue = value;
+    console.error(err);
+  }
+
+  return newValue;
 }
 
 $('#classes-input').change((event) => {
@@ -595,12 +664,29 @@ function updateCriteriaTable(containerId, file) {
 }
 
 function loadTable(selector, fields, data, errors) {
-  const columns = getColumns(fields);
+  const tableType = selector.split('-', 1)[0].substring(1);
+  const tableFields = config.tableFields[tableType];
+
+  const columns = getColumns(fields, tableFields);
+  const qualityColumns = getQualityColumns(tableType);
+  const tableColumns = [...columns, ...qualityColumns];
+  const ignoredColumns = ['id', 'errors'];
+
+  const autoAssignedColumns = columns.filter((col) => {
+    return !ignoredColumns.includes(col.field) && col.field !== col.title;
+  });
 
   const tableData = [{}, ...data].map((row, index) => ({
     id: index,
     ...row,
   }));
+
+  autoAssignedColumns.forEach((col) => {
+    tableData.forEach((row) => {
+      row[col.field] = row.id === 0 ? tableFields[col.field] : row[col.title];
+      delete row[col.title];
+    });
+  });
 
   errors.forEach((error) => {
     let rowId = 0;
@@ -619,9 +705,9 @@ function loadTable(selector, fields, data, errors) {
   });
 
   if (isTableCreated(selector)) {
-    updateTable(selector, columns, tableData);
+    updateTable(selector, tableColumns, tableData);
   } else {
-    createTable(selector, columns, tableData);
+    createTable(selector, tableColumns, tableData);
   }
 }
 
@@ -652,8 +738,8 @@ function createTable(selector, columns, data) {
   tables[containerId] = table;
 
   table.on('tableBuilt', () => {
-    autoAssignTableFields(containerId);
-    addCriteriaColumns(containerId);
+    // autoAssignTableFields(containerId);
+    // addCriteriaColumns(containerId);
   });
 
   table.on('dataProcessed', () => {
@@ -661,8 +747,8 @@ function createTable(selector, columns, data) {
       return;
     }
 
-    autoAssignTableFields(containerId);
-    addCriteriaColumns(containerId);
+    // autoAssignTableFields(containerId);
+    // addCriteriaColumns(containerId);
   });
 
   table.on('cellEdited', (cell) => cellEdited(cell));
@@ -714,21 +800,33 @@ function updateTable(selector, columns, data) {
   table.setData(data);
 }
 
-function getColumns(fields) {
+function getColumns(fields, tableFields) {
   const columns = fields.map((field) => {
-    return getColumn(field, field);
+    return getColumn(field, tableFields);
   });
 
   const idColumn = {
-    title: 'ID',
     field: 'id',
+    title: 'ID',
     sorter: 'number',
     headerSortTristate: true,
     vertAlign: 'middle',
   };
   columns.unshift(idColumn);
 
-  const errorsColumn = getColumn('Erros', 'errors');
+  const errorsColumn = {
+    field: 'errors',
+    title: 'Erros',
+    headerSortTristate: true,
+    vertAlign: 'middle',
+    formatter: 'textarea',
+    // cellMouseOver: (_, cell) => {
+    //   cellMouseOver(cell);
+    // },
+    // cellMouseOut: (_, cell) => {
+    //   cellMouseOut(cell);
+    // },
+  };
   columns.push(errorsColumn);
 
   // columns.push({
@@ -842,13 +940,12 @@ function mutator(value, data, _, _, component) {
   return newValue;
 }
 
-function getColumn(title, field) {
+function getColumn(title, tableFields) {
   return {
+    field: getColumnField(title, tableFields),
     title,
-    field,
     headerSortTristate: true,
     vertAlign: 'middle',
-    formatter: field === 'errors' ? 'textarea' : undefined,
     editable,
     editor: 'list',
     editorParams: {
@@ -871,15 +968,13 @@ function getColumn(title, field) {
 function editable(cell) {
   const row = cell.getRow();
 
-  // row instanceof RowComponent ??
   if (row._row.type !== 'row') {
     return false;
   }
 
   const rowIndex = row.getIndex();
-  const field = cell.getField();
 
-  return rowIndex === 0 && field !== 'errors';
+  return rowIndex === 0;
 }
 
 function valuesLookup(cell) {
@@ -955,6 +1050,17 @@ function downloadFile(filename, content, contentType) {
   window.URL.revokeObjectURL(url);
 }
 
+function getColumnField(title, tableFields) {
+  const convertedTitle = autoAssignStringConversion(title);
+
+  const fieldName = Object.keys(tableFields).find((name) => {
+    const convertedField = autoAssignStringConversion(tableFields[name]);
+    return convertedField === convertedTitle;
+  });
+
+  return fieldName ?? title;
+}
+
 // TODO: Do this on the table that is not yet built, to improve performance
 function autoAssignTableFields(containerId) {
   const table = tables[containerId];
@@ -1008,41 +1114,26 @@ function autoAssignTableFields(containerId) {
     });
 }
 
-// TODO: Do this on the table that is not yet built, to improve performance
-function addCriteriaColumns(containerId) {
-  const table = tables[containerId];
-  const tableId = table.element.id;
-  const tableType = tableId.split('-', 1)[0];
-
-  if (tableType !== 'classes') {
-    return;
+function getQualityColumns(tableType) {
+  if (tableType === 'rooms') {
+    return [];
   }
 
   const criteriaData = criteriaTable.getData();
 
-  criteriaData.forEach((row) => {
+  return criteriaData.map((row) => {
     const criteriaField = `criteria-${row.id}`;
-    
-    const columnDefinition = {
+
+    return {
       field: criteriaField,
+      title: row.name,
+      bottomCalc: row.aggregator?.toLowerCase(),
       mutator: (value, data, _type, _params, component) => {
         return qualityMutator(value, data, component);
       },
       headerSortTristate: true,
       vertAlign: 'middle',
     };
-
-    if (row.name) {
-      columnDefinition.title = row.name;
-    }
-
-    // TODO: Implement expression!
-
-    if (row.aggregator) {
-      columnDefinition.bottomCalc = row.aggregator.toLowerCase();
-    }
-
-    table.addColumn(columnDefinition);
   });
 }
 
