@@ -15,7 +15,9 @@ function createCriteriaTable() {
   const $table = $(`#${containerId} .custom-table`);
   
   const columns = getCriteriaColumns();
-  const data = getLocalCriteria() || config.defaultCriteria;
+
+  const localCriteria = getLocalCriteria();
+  const data = localCriteria?.length > 0 ? localCriteria : config.defaultCriteria;
   
   const options = {
     columns,
@@ -110,9 +112,6 @@ criteriaTable.on('rowAdded', (row) => {
 
     table.addColumn({
       field: criteriaField,
-      mutator: (value, data, _type, _params, component) => {
-        return qualityMutator(value, data, component);
-      },
       headerSortTristate: true,
       vertAlign: 'middle',
     }).then(() => {
@@ -168,18 +167,13 @@ criteriaTable.on('cellEdited', (cell) => {
     $('#class-tables').children('.table-container').each((_index, container) => {
       const $container = $(container);
       const containerId = $container.attr('id');
-
+      
       const table = tables[containerId];
-      const criteriaColumn = table.getColumn(criteriaField);
       const classesData = table.getData();
 
-      const updatedData = classesData.map((row) => ({
-        id: row.id,
-        [criteriaField]: qualityMutator(row[criteriaField], row, criteriaColumn),
-      }));
+      updateQualityColumnData($container, criteriaField, classesData);
 
-      table.updateData(updatedData)
-        .then(() => table.scrollToColumn(criteriaField));
+      table.replaceData(classesData);
     });
   } else if (field === 'aggregator') {
     $('#class-tables').children('.table-container').each((_index, container) => {
@@ -224,47 +218,75 @@ function formatter(cell) {
   return value;
 }
 
-function qualityMutator(value, classData, component) {
-  if (classData.id === 0) {
-    return value;
-  }
+function updateAllQualityColumns($classesContainer, classesData) {
+  const criteriaData = criteriaTable.getData();
 
-  const classesTable = component.getTable();
-  const field = component.getField();
+  criteriaData.forEach((row) => {
+    const criteriaField = `criteria-${row.id}`;
+    updateQualityColumnData($classesContainer, criteriaField, classesData);
+  });
+}
 
-  const $classesTable = $(classesTable.element);
-  const $classesContainer = $classesTable.closest('.table-container');
-  const classesContainerId = $classesContainer.attr('id');
+function updateQualityColumnData($classesContainer, criteriaField, classesData) {
+  const classFieldsData = classesData.find((row) => row.id === 0);
 
-  // TODO: Move this inside 'replaceExpression' function and only do it when there is the entity 'Sala'
-  // TODO: Throw an error if the room (Sala[]) is referenced but not found in rooms (roomData is undefined for this case)
+  const qualityData = criteriaTable.getData();
+  const criteriaData = qualityData.find((data) => `criteria-${data.id}` === criteriaField);
+  const expression = criteriaData.expression;
 
   const $tableNamesSelect = $classesContainer.find('.table-names-select');
   const tableNameVal = $tableNamesSelect.val();
-
+  
   let roomsContainerId;
   let roomsTable;
-  let roomData;
-
+  let roomsData;
+  let roomFieldsData;
+  
   if (tableNameVal !== '-1') {
     roomsContainerId = `rooms-container-${tableNameVal}`;
     roomsTable = tables[roomsContainerId];
-
-    const roomsData = roomsTable.getData();
-    const convertedClassRoom = autoAssignStringConversion(classData.roomName);
-
-    roomData = roomsData.find((row) => autoAssignStringConversion(row.roomNameB) === convertedClassRoom);
+    roomsData = roomsTable.getData();
+    roomFieldsData = roomsData.find((row) => row.id === 0);
   }
-  
-  const qualityData = criteriaTable.getData();
-  const criteriaData = qualityData.find((data) => `criteria-${data.id}` === field);
-  const expression = criteriaData.expression;
+
+  classesData.forEach((row) => {
+    const currentValue = row[criteriaField];
+
+    row[criteriaField] = resolveQualityExpression(
+      currentValue,
+      expression,
+      roomsContainerId,
+      row,
+      roomsData,
+      classFieldsData,
+      roomFieldsData,
+    );
+  });
+}
+
+function resolveQualityExpression(value, expression, roomsContainerId, classData, roomsData, classFieldsData, roomFieldsData) {
+  if (classData.id === 0 || !expression) {
+    return value;
+  }
+
+  const { newExpression, errors, roomData } = replaceExpression(
+    expression,
+    roomsContainerId,
+    classData,
+    roomsData,
+    classFieldsData,
+    roomFieldsData,
+  );
+
+  if (errors.length > 0) {
+    console.error(errors.join('\n'));
+    return value;
+  }
 
   let newValue;
 
   try {
-    const expressionWithVariables = replaceExpression(expression, roomsContainerId, classesContainerId);
-    newValue = eval(expressionWithVariables);
+    newValue = eval(newExpression);
   } catch (err) {
     newValue = value;
     console.error(err);
@@ -272,6 +294,11 @@ function qualityMutator(value, classData, component) {
 
   return newValue;
 }
+
+$('#upload-classes-btn').click(() => {
+  const $classesInput = $('#classes-input');
+  $classesInput[0].click();
+});
 
 $('#classes-input').change((event) => {
   const files = Array.from(event.target.files);
@@ -317,7 +344,7 @@ $('#classes-input').change((event) => {
     const roomsSelectHtml = $roomsSelect.prop('outerHTML');
 
     $('#class-tables').append(`
-      <div id="${containerId}" class="table-container d-inline-block mw-100 mb-3">
+      <div id="${containerId}" class="table-container d-inline-block mw-100 mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div class="table-full-name d-flex align-items-center"><h5 class="table-id mb-0">${tableNumber}</h5><h5 class="mb-0 mx-1"> - </h5><h5 class="table-name-heading table-name mb-0">${filenameWithoutExt}</h5></div>
           <div class="d-flex">
@@ -372,6 +399,11 @@ $('#classes-input').change((event) => {
   $(event.target).val(null);
 });
 
+$('#upload-rooms-btn').click(() => {
+  const $roomsInput = $('#rooms-input');
+  $roomsInput[0].click();
+});
+
 $('#rooms-input').change((event) => {
   const files = Array.from(event.target.files);
 
@@ -392,7 +424,7 @@ $('#rooms-input').change((event) => {
     const filenameWithoutExt = filename.substring(0, filename.lastIndexOf('.')) || filename;
 
     $('#room-tables').append(`
-      <div id="${containerId}" class="table-container d-inline-block mw-100 mb-3">
+      <div id="${containerId}" class="table-container d-inline-block mw-100 mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div class="table-full-name d-flex align-items-center"><h5 class="table-id mb-0">${tableNumber}</h5><h5 class="mb-0 mx-1"> - </h5><h5 class="table-name-heading table-name mb-0">${filenameWithoutExt}</h5></div>
           <div class="d-flex">
@@ -420,7 +452,7 @@ $('#rooms-input').change((event) => {
               <i class="bi bi-download"></i>
             </button>
             <button
-              class="delete-table-btn btn btn-outline-danger delete-rooms-btn"
+              class="delete-table-btn btn btn-outline-danger"
               type="button"
               data-bs-toggle="tooltip"
               data-bs-title="Remover tabela"
@@ -477,6 +509,13 @@ $('body').on('blur', '.table-name-input', (event) => {
   const dataNameSelects = $tablesContainer.data('name-selects');
 
   updateTableNameSelects(`#${containerId}`, dataNameSelects);
+
+  const tableType = containerId.split('-', 1)[0];
+
+  if (tableType === 'class') {
+    const $tableContainer = $heading.closest('.table-container');
+    updateQualityTraceName($tableContainer);
+  }
 });
 
 $('body').on('click', '.upload-table-btn', (event) => {
@@ -540,8 +579,14 @@ $('body').on('click', '.delete-table-btn', (event) => {
   const containerId = $tableContainer.attr('id');
   const $tablesContainer = $tableContainer.closest('.tables-container');
 
+  const containerIndex = $tableContainer.index();
+  const tableType = containerId.split('-', 1)[0];
+
   const $tooltips = $tableContainer.find('[data-bs-toggle="tooltip"]');
   $tooltips.tooltip('dispose');
+
+  const table = tables[containerId];
+  table.destroy();
 
   $tableContainer.remove();
 
@@ -552,6 +597,10 @@ $('body').on('click', '.delete-table-btn', (event) => {
   const dataNameSelects = $tablesContainer.data('name-selects');
 
   updateTableNameSelects(`#${tablesContainerId}`, dataNameSelects);
+
+  if (tableType === 'classes') {
+    removeQualityTrace(containerIndex);
+  }
 });
 
 $('body').on('click', '.add-row-btn', (event) => {
@@ -567,6 +616,21 @@ $('body').on('click', '.add-row-btn', (event) => {
 
   table.addRow(newRowData)
     .then(() => table.scrollToRow(newRowData.id));
+});
+
+$('body').on('change', '.table-names-select', (event) => {
+  const $target = $(event.target);
+  const $tableContainer = $target.closest('.table-container');
+  const containerId = $tableContainer.attr('id');
+  
+  const table = tables[containerId];
+  const data = table.getData();
+
+  updateAllQualityColumns($tableContainer, data);
+
+  console.time('replaceData');
+  table.replaceData(data)
+    .then(() => console.timeEnd('replaceData'));
 });
 
 function getTableInfos(selector) {
@@ -688,6 +752,13 @@ function loadTable(selector, fields, data, errors) {
     });
   });
 
+  if (tableType === 'classes') {
+    const $table = $(selector);
+    const $container = $table.closest('.table-container');
+
+    updateAllQualityColumns($container, tableData);
+  }
+
   errors.forEach((error) => {
     let rowId = 0;
 
@@ -720,7 +791,6 @@ function createTable(selector, columns, data) {
     columns,
     rowFormatter,
     frozenRows: 1,
-    // height: '500px',
     maxHeight: '50vh',
     layout: 'fitDataTable',
     layoutColumnsOnNewData: true,
@@ -734,27 +804,20 @@ function createTable(selector, columns, data) {
   const $table = $(selector);
   const $tableContainer = $table.closest('.table-container');
   const containerId = $tableContainer.attr('id');
+  const tableType = containerId.split('-', 1)[0];
 
   tables[containerId] = table;
 
-  table.on('tableBuilt', () => {
-    // autoAssignTableFields(containerId);
-    // addCriteriaColumns(containerId);
-  });
-
-  table.on('dataProcessed', () => {
-    if (!table.initialized) {
-      return;
-    }
-
-    // autoAssignTableFields(containerId);
-    // addCriteriaColumns(containerId);
-  });
+  if (tableType === 'classes') {
+    addQualityTrace($tableContainer);
+    
+    table.on('tableBuilt', () => updateQualityData($tableContainer));
+  }
 
   table.on('cellEdited', (cell) => cellEdited(cell));
 }
 
-function cellEdited(cell, scrollToColumn = true) {
+function cellEdited(cell) {
   const table = cell.getTable();
   const data = table.getData();
 
@@ -773,20 +836,20 @@ function cellEdited(cell, scrollToColumn = true) {
     return fields[name] === cellValue;
   }) ?? columnTitle;
 
-  const newData = data.map((row) => ({
-    id: row.id,
-    [cellField]: undefined,
-    [fieldName]: row[cellField],
-  }));
+  const newData = data.map((row) => {
+    const newRow = {
+      ...row,
+      [fieldName]: row[cellField],
+    };
+    
+    delete newRow[cellField];
+    return newRow;
+  });
 
-  table.updateData(newData)
+  table.replaceData(newData)
     .then(() => {
       table.updateColumnDefinition(cellField, { field: fieldName })
-        .then(() => {
-          if (scrollToColumn) {
-            table.scrollToColumn(fieldName);
-          }
-        });
+        .then(() => table.scrollToColumn(fieldName));
     });
 }
 
@@ -906,40 +969,6 @@ function getTooltip(cell) {
   return tooltip;
 }
 
-function mutator(value, data, _, _, component) {
-  let newValue = value;
-
-  if (data.id === 0) {
-    return newValue;
-  }
-
-  const table = component.getTable();
-  const tableData = table.getData();
-
-  const fieldsRow = tableData.find((row) => row.id === 0);
-  const field = component.getField();
-  const expression = fieldsRow[field];
-
-  if (expression === undefined) {
-    return newValue;
-  }
-
-  // console.log('expression:', expression);
-  // console.log('dataExpression:', dataExpression);
-  // console.log('data:', data);
-  // console.log('newValue:', newValue);
-
-  const dataExpression = expression.replace(variablesRegexp, "data['$1']");
-
-  try {
-    newValue = eval(dataExpression);
-  } catch {
-    newValue = value;
-  }
-
-  return newValue;
-}
-
 function getColumn(title, tableFields) {
   return {
     field: getColumnField(title, tableFields),
@@ -973,7 +1002,6 @@ function editable(cell) {
   }
 
   const rowIndex = row.getIndex();
-
   return rowIndex === 0;
 }
 
@@ -1061,59 +1089,6 @@ function getColumnField(title, tableFields) {
   return fieldName ?? title;
 }
 
-// TODO: Do this on the table that is not yet built, to improve performance
-function autoAssignTableFields(containerId) {
-  const table = tables[containerId];
-  const tableId = table.element.id;
-  const tableType = tableId.split('-', 1)[0];
-  const columns = table.getColumns();
-
-  const fieldsRow = table.getRow(0);
-  const fieldsData = fieldsRow.getData();
-  const fields = config.tableFields[tableType];
-  const updatedFieldsData = { id: fieldsData.id };
-
-  columns.forEach((column) => {
-    const definition = column.getDefinition();
-    const title = definition.title;
-    const field = definition.field;
-    const fieldValue = fieldsData[field];
-
-    if (['id', 'errors'].includes(field) || fieldValue) {
-      return;
-    }
-
-    const titleComparisonStr = autoAssignStringConversion(title);
-    const fieldName = Object.keys(fields).find((name) => {
-      const fieldComparisonStr = autoAssignStringConversion(fields[name]);
-      return fieldComparisonStr === titleComparisonStr;
-    });
-
-    if (fieldName) {
-      updatedFieldsData[field] = fields[fieldName];
-    }
-  });
-
-  table.updateData([updatedFieldsData])
-    .then(() => {
-      const fieldCells = fieldsRow.getCells();
-
-      fieldCells.forEach((cell) => {
-        const cellField = cell.getField();
-
-        if (cellField === 'id') {
-          return;
-        }
-
-        if (!Object.keys(updatedFieldsData).includes(cellField)) {
-          return;
-        }
-
-        cellEdited(cell, false);
-      });
-    });
-}
-
 function getQualityColumns(tableType) {
   if (tableType === 'rooms') {
     return [];
@@ -1128,16 +1103,35 @@ function getQualityColumns(tableType) {
       field: criteriaField,
       title: row.name,
       bottomCalc: row.aggregator?.toLowerCase(),
-      mutator: (value, data, _type, _params, component) => {
-        return qualityMutator(value, data, component);
-      },
+      bottomCalcFormatter: qualityCalcFormatter,
       headerSortTristate: true,
       vertAlign: 'middle',
     };
   });
 }
 
+function qualityCalcFormatter(cell) {
+  const cellValue = cell.getValue();
+  const table = cell.getTable();
+
+  if (!table.initialized) {
+    return cellValue;
+  }
+
+  const tableId = table.element.id;
+  const $table = $(`#${tableId}`);
+  const $container = $table.closest('.table-container');
+
+  updateQualityData($container);
+
+  return cellValue;
+}
+
 function autoAssignStringConversion(str) {
+  if (!str) {
+    return str;
+  }
+
   let newStr = str.toLowerCase();
   
   newStr = withoutExtraSpaces(newStr);
@@ -1154,26 +1148,35 @@ function withoutDiacritics(str) {
   return str.normalize('NFD').replace(diacriticsRegexp, '');
 }
 
-function replaceExpression(expression, roomsContainerId, classesContainerId) {
+function replaceExpression(expression, roomsContainerId, classData, roomsData, classFieldsData, roomFieldsData) {
   const entities = {
     'Aula': {
       data: 'classData',
       fields: config.tableFields.classes,
-      filledFields: getFilledFields(classesContainerId),
+      filledFields: getFilledFields(classFieldsData),
     },
     'Sala': {
       data: 'roomData',
       fields: config.tableFields.rooms,
-      filledFields: roomsContainerId ? getFilledFields(roomsContainerId) : undefined,
+      filledFields: roomsContainerId ? getFilledFields(roomFieldsData) : undefined,
     },
   };
   
   const entityKeys = Object.keys(entities);
   const errors = [];
 
+  const convertedClassRoom = autoAssignStringConversion(classData.roomName);
+  const roomNameField = entities['Sala'].fields['roomNameB'];
+  const convertedRoomName = autoAssignStringConversion(roomNameField);
+  let roomEntityReferenced = false;
+
   const newExpression = expression.replace(variablesRegexp, replacer);
 
   function replacer(variable, entity, field) {
+    if (entity === 'Sala') {
+      roomEntityReferenced = true;
+    }
+
     if (!entityKeys.includes(entity)) {
       errors.push(`Entidade '${entity}' não é válida. Utilize uma das seguintes entidades: ${entityKeys}`);
       return variable;
@@ -1195,11 +1198,15 @@ function replaceExpression(expression, roomsContainerId, classesContainerId) {
     }
 
     if (!filledFields.some((field) => autoAssignStringConversion(field) === convertedField)) {
-      errors.push(`Campo '${field}' não está associado a qualquer coluna da tabela.`);
+      errors.push(`Campo '${field}' não está associado a qualquer coluna da tabela para a entidade '${entity}'.`);
       return variable;
     }
 
-    // TODO: fieldName might change if we no longer change the field of the column
+    if (entity === 'Sala' && !filledFields.some((field) => autoAssignStringConversion(field) === convertedRoomName)) {
+      errors.push(`Campo '${roomNameField}' não está associado a qualquer coluna da tabela para a entidade '${entity}'.`);
+      return variable;
+    }
+
     const dataName = entities[entity].data;
     const fieldName = Object.keys(entityFields).find((key) => {
       return autoAssignStringConversion(entityFields[key]) === convertedField;
@@ -1208,19 +1215,24 @@ function replaceExpression(expression, roomsContainerId, classesContainerId) {
     return `${dataName}["${fieldName}"]`;
   }
 
-  if (errors.length > 0) {
-    throw new Error(errors.join('\n'));
+  let roomData;
+  if (errors.length === 0 && roomEntityReferenced) {
+    roomData = roomsData.find((row) => autoAssignStringConversion(row.roomNameB) === convertedClassRoom);
+    const classRoomField = entities['Aula'].fields['roomName'];
+
+    if (!convertedClassRoom) {
+      errors.push(`Campo '${classRoomField}' não tem valor para esta aula.`);
+    } else if (!roomData) {
+      errors.push(`Campo '${classRoomField}' com o valor '${classData.roomName}' não tem qualquer correspondência na tabela de salas.`);
+    }
   }
 
-  return newExpression;
+  return { newExpression, errors, roomData };
 }
 
-function getFilledFields(containerId) {
-  const table = tables[containerId];
-  const fieldsRow = table.getRow(0);
-  const fieldsData = fieldsRow.getData();
-
+function getFilledFields(fieldsData) {
   return Object.values(fieldsData).filter((field) => field);
 }
 
-// TODO: Do we even need to update the field on the table? It is time-consuming and might not be needed
+// TODO: Error tooltips and cell format as error
+// TODO: Convert column to correct type

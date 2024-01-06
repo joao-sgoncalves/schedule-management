@@ -1,72 +1,74 @@
-const trace1 = {
-  name: 'Horário 1',
-  x: ['Sobreposição', 'Sobrelotação'],
-  y: [10, 15],
-  type: 'scatter',
-};
-
-const trace2 = {
-  name: 'Horário 2',
-  x: ['Sobreposição', 'Sobrelotação'],
-  y: [16, 5],
-  type: 'scatter',
-};
-
-const data = [trace1, trace2];
-
-const layout = {
-  title: 'Qualidade dos Horários',
-  xaxis: {
-    title: 'Critério',
-  },
-  yaxis: {
-    title: 'Valor',
-  },
-  legend: {
-    title: {
-      text: 'Horários',
-    },
-  },
-};
-
-Plotly.newPlot('quality-chart', data, layout, { responsive: true });
-
-function createQualityChart() {
-  const criteriaData = criteriaTable.getData();
-  const criteriaIds = criteriaData.map((row) => row.id);
-  const criteriaNames = criteriaData.map((row) => row.name);
-  
-  const graphData = [];
-  const graphConfig = { responsive: true };
-
-  classTables.forEach((table) => {
-    const tableId = table.element.id;
-    const tableNumber = parseInt(tableId.split('-').pop(), 10);
-
-    // TODO: Avoid using IDs
-    const tableNameInputId = `classes-name-input-${tableNumber}`;
-    const tableName = $(`#${tableNameInputId}`).val();
-
-    const calcResults = table.getCalcResults();
-    const criteriaCalcs = criteriaIds.map((id) => {
-      return calcResults.bottom[`criteria-${id}`];
-    });
-
-    const trace = {
-      name: tableName,
-      x: criteriaNames,
-      y: criteriaCalcs,
-      type: 'scatter',
-    };
-
-    graphData.push(trace);
-  });
-
-  Plotly.newPlot('quality-chart', graphData, layout, graphConfig);
-}
-
-$('#create-chart-btn').click(() => {
+$(document).ready(() => {
   createQualityChart();
 });
 
-// Garantir que se os critérios já existirem na tabela, deve-se iniciar logo as colunas da tabela com esses critérios
+function createQualityChart() {
+  const layout = {
+    title: 'Qualidade dos Horários',
+    xaxis: {
+      title: 'Critério',
+    },
+    yaxis: {
+      title: 'Valor',
+    },
+    showlegend: true,
+    legend: {
+      title: {
+        text: 'Horários',
+      },
+    },
+  };
+
+  const config = { responsive: true };
+
+  Plotly.newPlot('quality-chart', [], layout, config);
+}
+
+function addQualityTrace($container) {
+  const $tableFullName = $container.find('.table-full-name');
+  const tableFullName = $tableFullName.text();
+
+  const trace = {
+    name: tableFullName,
+    type: 'scatter',
+  };
+
+  Plotly.addTraces('quality-chart', trace);
+}
+
+function updateQualityData($container) {
+  const containerId = $container.attr('id');
+  const table = tables[containerId];
+
+  const criteriaData = criteriaTable.getData();
+  const criteriaIds = criteriaData.map((row) => row.id);
+  const criteriaNames = criteriaData.map((row) => row.name);
+
+  const calcResults = table.getCalcResults();
+  const criteriaCalcs = criteriaIds.map((id) => {
+    return calcResults.bottom[`criteria-${id}`];
+  });
+
+  const update = {
+    x: [criteriaNames],
+    y: [criteriaCalcs],
+  };
+
+  const traceIndex = $container.index();
+  
+  console.log('update', update);
+  Plotly.restyle('quality-chart', update, traceIndex);
+}
+
+function updateQualityTraceName($container) {
+  const $tableFullName = $container.find('.table-full-name');
+  const tableFullName = $tableFullName.text();
+
+  const traceIndex = $container.index();
+
+  Plotly.restyle('quality-chart', { name: tableFullName }, traceIndex);
+}
+
+function removeQualityTrace(traceIndex) {
+  Plotly.deleteTraces('quality-chart', traceIndex);
+}

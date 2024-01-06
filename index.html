@@ -28,7 +28,7 @@
       <textarea id="codemirror-test"></textarea>
 
       <!-- Quality Criteria Table -->
-      <div id="criteria-container" class="table-container d-inline-block mw-100 my-3">
+      <div id="criteria-container" class="table-container d-inline-block mw-100 my-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5 class="table-name mb-0">Critérios de Qualidade</h5>
           <div class="d-flex">
@@ -70,21 +70,25 @@
       </div>
 
       <!-- Room Tables -->
-      <div>
-        <div class="row mb-3">
+      <div class="mb-4">
+        <div class="row">
           <div class="col-auto">
-            <label class="form-label" for="rooms-input">Ficheiros de salas (.csv)</label>
+            <h5 class="mb-3">Tabelas de Salas</h5>
+            <button id="upload-rooms-btn" class="btn btn-outline-primary" type="button">
+              Carregar tabelas
+              <i class="bi bi-upload ms-1"></i>
+            </button>
             <input
               id="rooms-input"
-              class="form-control"
               type="file"
               accept="text/csv"
               multiple
+              hidden
             >
           </div>
         </div>
 
-        <div class="row mb-3">
+        <div class="row">
           <div class="col-auto">
             <div id="room-tables" class="tables-container" data-name-selects="#class-tables"></div>
           </div>
@@ -92,28 +96,37 @@
       </div>
 
       <!-- Class Tables -->
-      <div class="row mb-3">
-        <div class="col-auto">
-          <label class="form-label" for="classes-input">Ficheiros de horários (.csv)</label>
-          <input
-            id="classes-input"
-            class="form-control"
-            type="file"
-            accept="text/csv"
-            multiple>
+      <div class="mb-4">
+        <div class="row">
+          <div class="col-auto">
+            <h5 class="mb-3">Tabelas de Horários</h5>
+            <button id="upload-classes-btn" class="btn btn-outline-primary" type="button">
+              Carregar tabelas
+              <i class="bi bi-upload ms-1"></i>
+            </button>
+            <input
+              id="classes-input"
+              type="file"
+              accept="text/csv"
+              multiple
+              hidden
+            >
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-auto">
+            <div id="class-tables" class="tables-container"></div>
+          </div>
         </div>
       </div>
 
-      <div id="class-tables" class="tables-container row mb-3"></div>
-  
       <!-- Quality Chart -->
-      <div class="row mb-3">
+      <div class="row mb-4">
         <div class="col">
           <div id="quality-chart"></div>
         </div>
       </div>
-
-      <button id="create-chart-btn" class="btn btn-primary" type="button">Create Quality Chart</button>
     </div>
 
     <!-- jQuery -->
