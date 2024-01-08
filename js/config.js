@@ -1,18 +1,48 @@
 var config = {
   tableFields: {
     classes: {
-      building: 'Edifício',
-      roomName: 'Nome sala',
-      normalCapacity: 'Capacidade Normal',
-      examCapacity: 'Capacidade Exame',
-      numberOfCharacteristics: 'Nº características',
+      building: {
+        title: 'Edifício',
+        formatter: 'plaintext',
+      },
+      roomName: {
+        title: 'Nome sala',
+        formatter: 'plaintext',
+      },
+      normalCapacity: {
+        title: 'Capacidade Normal',
+        formatter: 'plaintext',
+      },
+      examCapacity: {
+        title: 'Capacidade Exame',
+        formatter: 'plaintext',
+      },
+      numberOfCharacteristics: {
+        title: 'Nº características',
+        formatter: 'plaintext',
+      },
     },
     rooms: {
-      buildingA: 'Building A',
-      roomNameB: 'Room Name B',
-      normalCapacityC: 'Normal Capacity C',
-      examCapacityD: 'Exam Capacity D',
-      numberOfCharacteristicsE: 'Number of Characteristics E',
+      buildingA: {
+        title: 'Building A',
+        formatter: 'plaintext',
+      },
+      roomNameB: {
+        title: 'Room Name B',
+        formatter: 'plaintext',
+      },
+      normalCapacityC: {
+        title: 'Normal Capacity C',
+        formatter: 'plaintext',
+      },
+      examCapacityD: {
+        title: 'Exam Capacity D',
+        formatter: 'plaintext',
+      },
+      numberOfCharacteristicsE: {
+        title: 'Number of Characteristics E',
+        formatter: 'plaintext',
+      },
     },
   },
   defaultCriteria: [

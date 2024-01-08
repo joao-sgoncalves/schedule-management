@@ -152,7 +152,9 @@ criteriaTable.on('cellEdited', (cell) => {
   const field = cell.getField();
   const value = cell.getValue();
   const data = cell.getData();
+  
   const criteriaField = `criteria-${data.id}`;
+  const criteriaErrorsField = `criteria-${data.id}-errors`;
 
   if (field === 'name') {
     $('#class-tables').children('.table-container').each((_index, container) => {
@@ -171,7 +173,7 @@ criteriaTable.on('cellEdited', (cell) => {
       const table = tables[containerId];
       const classesData = table.getData();
 
-      updateQualityColumnData($container, criteriaField, classesData);
+      updateQualityColumnData($container, criteriaField, criteriaErrorsField, classesData);
 
       table.replaceData(classesData);
     });
@@ -187,47 +189,41 @@ criteriaTable.on('cellEdited', (cell) => {
   }
 });
 
-function formatter(cell) {
-  const data = cell.getData();
-  const value = cell.getValue();
-
-  if (data.id === 0) {
-    return value;
-  }
-
-  const table = cell.getTable();
-  const tableData = table.getData();
-
-  const fieldsRow = tableData.find((row) => row.id === 0);
-  const field = cell.getField();
-  const expression = fieldsRow[field];
-
-  if (expression === undefined) {
-    return value;
-  }
-
-  const dataExpression = expression.replace(variablesRegexp, "data['$1']");
-  const cellElement = cell.getElement();
-
-  try {
-    eval(dataExpression);
-  } catch {
-    $(cellElement).addClass('table-danger');
-  }
-
-  return value;
-}
-
 function updateAllQualityColumns($classesContainer, classesData) {
   const criteriaData = criteriaTable.getData();
 
   criteriaData.forEach((row) => {
     const criteriaField = `criteria-${row.id}`;
-    updateQualityColumnData($classesContainer, criteriaField, classesData);
+    const criteriaErrorsField = `criteria-${row.id}-errors`;
+
+    updateQualityColumnData($classesContainer, criteriaField, criteriaErrorsField, classesData);
   });
 }
 
-function updateQualityColumnData($classesContainer, criteriaField, classesData) {
+function updateQualityReferencedByRoom($roomsContainer) {
+  const $tableId = $roomsContainer.find('.table-id');
+  const tableId = $tableId.text();
+
+  $('#class-tables').children('.table-container').each((_index, container) => {
+    const $classesContainer = $(container);
+    const $tableNamesSelect = $classesContainer.find('.table-names-select');
+    const tableNameVal = $tableNamesSelect.val();
+    
+    if (tableNameVal !== tableId) {
+      return;
+    }
+
+    const classesContainerId = $classesContainer.attr('id');
+    const classesTable = tables[classesContainerId];
+    const classesData = classesTable.getData();
+
+    updateAllQualityColumns($classesContainer, classesData);
+
+    classesTable.replaceData(classesData);
+  });
+}
+
+function updateQualityColumnData($classesContainer, criteriaField, criteriaErrorsField, classesData) {
   const classFieldsData = classesData.find((row) => row.id === 0);
 
   const qualityData = criteriaTable.getData();
@@ -252,7 +248,7 @@ function updateQualityColumnData($classesContainer, criteriaField, classesData) 
   classesData.forEach((row) => {
     const currentValue = row[criteriaField];
 
-    row[criteriaField] = resolveQualityExpression(
+    const { newValue, errors } = resolveQualityExpression(
       currentValue,
       expression,
       roomsContainerId,
@@ -261,12 +257,15 @@ function updateQualityColumnData($classesContainer, criteriaField, classesData) 
       classFieldsData,
       roomFieldsData,
     );
+
+    row[criteriaField] = newValue;
+    row[criteriaErrorsField] = errors.join('\n');
   });
 }
 
 function resolveQualityExpression(value, expression, roomsContainerId, classData, roomsData, classFieldsData, roomFieldsData) {
   if (classData.id === 0 || !expression) {
-    return value;
+    return { newValue: value, errors: [] };
   }
 
   const { newExpression, errors, roomData } = replaceExpression(
@@ -279,8 +278,7 @@ function resolveQualityExpression(value, expression, roomsContainerId, classData
   );
 
   if (errors.length > 0) {
-    console.error(errors.join('\n'));
-    return value;
+    return { newValue: value, errors };
   }
 
   let newValue;
@@ -289,10 +287,10 @@ function resolveQualityExpression(value, expression, roomsContainerId, classData
     newValue = eval(newExpression);
   } catch (err) {
     newValue = value;
-    console.error(err);
+    errors.push(err.message);
   }
 
-  return newValue;
+  return { newValue, errors };
 }
 
 $('#upload-classes-btn').click(() => {
@@ -628,9 +626,7 @@ $('body').on('change', '.table-names-select', (event) => {
 
   updateAllQualityColumns($tableContainer, data);
 
-  console.time('replaceData');
-  table.replaceData(data)
-    .then(() => console.timeEnd('replaceData'));
+  table.replaceData(data);
 });
 
 function getTableInfos(selector) {
@@ -746,9 +742,13 @@ function loadTable(selector, fields, data, errors) {
   }));
 
   autoAssignedColumns.forEach((col) => {
+    const field = col.field;
+    const title = col.title;
+    const fieldTitle = tableFields[field].title;
+
     tableData.forEach((row) => {
-      row[col.field] = row.id === 0 ? tableFields[col.field] : row[col.title];
-      delete row[col.title];
+      row[field] = row.id === 0 ? fieldTitle : row[title];
+      delete row[title];
     });
   });
 
@@ -830,11 +830,14 @@ function cellEdited(cell) {
 
   const tableId = table.element.id;
   const tableType = tableId.split('-', 1)[0];
+  const tableFields = config.tableFields[tableType];
 
-  const fields = config.tableFields[tableType];
-  const fieldName = Object.keys(fields).find((name) => {
-    return fields[name] === cellValue;
+  const fieldName = Object.keys(tableFields).find((key) => {
+    return tableFields[key].title === cellValue;
   }) ?? columnTitle;
+
+  const formatter = tableFields[fieldName]?.formatter;
+  const formatterParams = tableFields[fieldName]?.formatterParams;
 
   const newData = data.map((row) => {
     const newRow = {
@@ -846,10 +849,27 @@ function cellEdited(cell) {
     return newRow;
   });
 
+  const updateDefinition = {
+    field: fieldName,
+    formatter,
+    formatterParams,
+  };
+
   table.replaceData(newData)
     .then(() => {
-      table.updateColumnDefinition(cellField, { field: fieldName })
-        .then(() => table.scrollToColumn(fieldName));
+      table.updateColumnDefinition(cellField, updateDefinition)
+        .then(() => {
+          table.scrollToColumn(fieldName);
+
+          const $table = $(table.element);
+          const $container = $table.closest('.table-container');
+
+          if (tableType === 'classes') {
+            updateAllQualityColumns($container, newData);
+          } else {
+            updateQualityReferencedByRoom($container);
+          }
+        });
     });
 }
 
@@ -883,96 +903,48 @@ function getColumns(fields, tableFields) {
     headerSortTristate: true,
     vertAlign: 'middle',
     formatter: 'textarea',
-    // cellMouseOver: (_, cell) => {
-    //   cellMouseOver(cell);
-    // },
-    // cellMouseOut: (_, cell) => {
-    //   cellMouseOut(cell);
-    // },
   };
   columns.push(errorsColumn);
-
-  // columns.push({
-  //   title: 'Custom',
-  //   field: 'Custom',
-  //   editableTitle: true,
-  //   editable,
-  //   editor: 'input',
-  //   mutator,
-  //   tooltip: (_, cell) => {
-  //     return getTooltip(cell);
-  //   },
-  //   formatter,
-  // });
 
   return columns;
 }
 
-function formatter(cell) {
+function getQualityTooltip(cell) {
   const data = cell.getData();
-  const value = cell.getValue();
+  const cellField = cell.getField();
+  const cellErrorsField = `${cellField}-errors`;
 
-  if (data.id === 0) {
-    return value;
-  }
+  return data[cellErrorsField];
+}
 
-  const table = cell.getTable();
-  const tableData = table.getData();
+function qualityFormatter(cell) {
+  const cellValue = cell.getValue();
 
-  const fieldsRow = tableData.find((row) => row.id === 0);
-  const field = cell.getField();
-  const expression = fieldsRow[field];
+  const cellField = cell.getField();
+  const cellErrorsField = `${cellField}-errors`;
+  
+  const data = cell.getData();
+  const cellErrors = data[cellErrorsField];
 
-  if (expression === undefined) {
-    return value;
-  }
-
-  const dataExpression = expression.replace(variablesRegexp, "data['$1']");
-  const cellElement = cell.getElement();
-
-  try {
-    eval(dataExpression);
-  } catch {
+  if (cellErrors) {
+    const cellElement = cell.getElement();
+    
     $(cellElement).addClass('table-danger');
   }
 
-  return value;
-}
-
-function getTooltip(cell) {
-  const data = cell.getData();
-  let tooltip = undefined;
-
-  if (data.id === 0) {
-    return tooltip;
-  }
-
-  const table = cell.getTable();
-  const tableData = table.getData();
-
-  const fieldsRow = tableData.find((row) => row.id === 0);
-  const field = cell.getField();
-  const expression = fieldsRow[field];
-
-  if (expression === undefined) {
-    return tooltip;
-  }
-
-  const dataExpression = expression.replace(variablesRegexp, "data['$1']");
-  
-  try {
-    eval(dataExpression);
-  } catch (error) {
-    tooltip = error.message;
-  }
-
-  return tooltip;
+  return cellValue;
 }
 
 function getColumn(title, tableFields) {
+  const field = getColumnField(title, tableFields);
+  const formatter = tableFields[field]?.formatter;
+  const formatterParams = tableFields[field]?.formatterParams;
+
   return {
-    field: getColumnField(title, tableFields),
+    field,
     title,
+    formatter,
+    formatterParams,
     headerSortTristate: true,
     vertAlign: 'middle',
     editable,
@@ -984,12 +956,6 @@ function getColumn(title, tableFields) {
       autocomplete: true,
       allowEmpty: true,
       listOnEmpty: true,
-    },
-    cellMouseOver: (_, cell) => {
-      cellMouseOver(cell);
-    },
-    cellMouseOut: (_, cell) => {
-      cellMouseOut(cell);
     },
   };
 }
@@ -1013,39 +979,20 @@ function valuesLookup(cell) {
   const cellValue = cell.getValue();
   const rowData = cell.getData();
   const rowValues = Object.values(rowData);
-  const fields = config.tableFields[tableType];
+  const tableFields = config.tableFields[tableType];
 
-  return Object.values(fields).filter((value) => {
-    return value === cellValue || !rowValues.includes(value);
+  return Object.values(tableFields).map((field) => field.title).filter((title) => {
+    return title === cellValue || !rowValues.includes(title);
   });
-}
-
-function cellMouseOver(cell) {
-  const data = cell.getData();
-  const row = cell.getRow();
-  const rowElement = row.getElement();
-
-  if (data.errors) {
-    $(rowElement).removeClass('table-danger');
-  }
-}
-
-function cellMouseOut(cell) {
-  const data = cell.getData();
-  const row = cell.getRow();
-  const rowElement = row.getElement();
-
-  if (data.errors) {
-    $(rowElement).addClass('table-danger');
-  }
 }
 
 function rowFormatter(row) {
   const data = row.getData();
-  const rowElement = row.getElement();
 
   if (data.errors) {
-    $(rowElement).addClass("table-danger");
+    const rowElement = row.getElement();
+
+    $(rowElement).addClass('table-danger');
   }
 }
 
@@ -1081,8 +1028,8 @@ function downloadFile(filename, content, contentType) {
 function getColumnField(title, tableFields) {
   const convertedTitle = autoAssignStringConversion(title);
 
-  const fieldName = Object.keys(tableFields).find((name) => {
-    const convertedField = autoAssignStringConversion(tableFields[name]);
+  const fieldName = Object.keys(tableFields).find((key) => {
+    const convertedField = autoAssignStringConversion(tableFields[key].title);
     return convertedField === convertedTitle;
   });
 
@@ -1095,19 +1042,32 @@ function getQualityColumns(tableType) {
   }
 
   const criteriaData = criteriaTable.getData();
+  const columns = [];
 
-  return criteriaData.map((row) => {
+  criteriaData.forEach((row) => {
     const criteriaField = `criteria-${row.id}`;
+    const criteriaErrorsField = `criteria-${row.id}-errors`;
 
-    return {
+    columns.push({
       field: criteriaField,
       title: row.name,
+      formatter: qualityFormatter,
       bottomCalc: row.aggregator?.toLowerCase(),
       bottomCalcFormatter: qualityCalcFormatter,
+      tooltip: (_, cell) => {
+        return getQualityTooltip(cell);
+      },
       headerSortTristate: true,
       vertAlign: 'middle',
-    };
+    });
+
+    columns.push({
+      field: criteriaErrorsField,
+      visible: false,
+    });
   });
+
+  return columns;
 }
 
 function qualityCalcFormatter(cell) {
@@ -1166,8 +1126,8 @@ function replaceExpression(expression, roomsContainerId, classData, roomsData, c
   const errors = [];
 
   const convertedClassRoom = autoAssignStringConversion(classData.roomName);
-  const roomNameField = entities['Sala'].fields['roomNameB'];
-  const convertedRoomName = autoAssignStringConversion(roomNameField);
+  const roomNameTitle = entities['Sala'].fields['roomNameB'].title;
+  const convertedRoomTitle = autoAssignStringConversion(roomNameTitle);
   let roomEntityReferenced = false;
 
   const newExpression = expression.replace(variablesRegexp, replacer);
@@ -1188,12 +1148,12 @@ function replaceExpression(expression, roomsContainerId, classData, roomsData, c
     }
 
     const entityFields = entities[entity].fields;
-    const fieldNames = Object.values(entityFields);
+    const fieldTitles = Object.values(entityFields).map((field) => field.title);
     const filledFields = entities[entity].filledFields;
     const convertedField = autoAssignStringConversion(field);
   
-    if (!fieldNames.some((name) => autoAssignStringConversion(name) === convertedField)) {
-      errors.push(`Campo '${field}' não é válido para a entidade '${entity}'. Utilize um dos seguintes campos: ${fieldNames}`);
+    if (!fieldTitles.some((name) => autoAssignStringConversion(name) === convertedField)) {
+      errors.push(`Campo '${field}' não é válido para a entidade '${entity}'. Utilize um dos seguintes campos: ${fieldTitles}`);
       return variable;
     }
 
@@ -1202,14 +1162,14 @@ function replaceExpression(expression, roomsContainerId, classData, roomsData, c
       return variable;
     }
 
-    if (entity === 'Sala' && !filledFields.some((field) => autoAssignStringConversion(field) === convertedRoomName)) {
-      errors.push(`Campo '${roomNameField}' não está associado a qualquer coluna da tabela para a entidade '${entity}'.`);
+    if (entity === 'Sala' && !filledFields.some((field) => autoAssignStringConversion(field) === convertedRoomTitle)) {
+      errors.push(`Campo '${roomNameTitle}' não está associado a qualquer coluna da tabela para a entidade '${entity}'.`);
       return variable;
     }
 
     const dataName = entities[entity].data;
     const fieldName = Object.keys(entityFields).find((key) => {
-      return autoAssignStringConversion(entityFields[key]) === convertedField;
+      return autoAssignStringConversion(entityFields[key].title) === convertedField;
     });
 
     return `${dataName}["${fieldName}"]`;
@@ -1218,12 +1178,12 @@ function replaceExpression(expression, roomsContainerId, classData, roomsData, c
   let roomData;
   if (errors.length === 0 && roomEntityReferenced) {
     roomData = roomsData.find((row) => autoAssignStringConversion(row.roomNameB) === convertedClassRoom);
-    const classRoomField = entities['Aula'].fields['roomName'];
+    const classRoomTitle = entities['Aula'].fields['roomName'].title;
 
     if (!convertedClassRoom) {
-      errors.push(`Campo '${classRoomField}' não tem valor para esta aula.`);
+      errors.push(`Campo '${classRoomTitle}' não tem valor para esta aula.`);
     } else if (!roomData) {
-      errors.push(`Campo '${classRoomField}' com o valor '${classData.roomName}' não tem qualquer correspondência na tabela de salas.`);
+      errors.push(`Campo '${classRoomTitle}' com o valor '${classData.roomName}' não tem qualquer correspondência na tabela de salas.`);
     }
   }
 
@@ -1232,6 +1192,23 @@ function replaceExpression(expression, roomsContainerId, classData, roomsData, c
 
 function getFilledFields(fieldsData) {
   return Object.values(fieldsData).filter((field) => field);
+}
+
+function convertTo(formatter, value) {
+  let newValue = value;
+
+  switch (formatter) {
+    case 'String':
+      newValue = String(value);
+      break;
+    case 'Number':
+      newValue = Number(value);
+      break;
+    default:
+      throw new Error(`Formatter '${formatter}' is not defined.`);
+  }
+
+  return newValue;
 }
 
 // TODO: Error tooltips and cell format as error

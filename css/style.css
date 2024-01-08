@@ -1,3 +1,11 @@
 .table-name-heading {
   cursor: pointer;
 }
+
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row.table-danger:hover {
+  background-color: #ced4da !important;
+}
+
+.tabulator .tabulator-tableholder .tabulator-table .tabulator-row.tabulator-selectable:hover .tabulator-cell.table-danger {
+  background-color: #ced4da !important;
+}
