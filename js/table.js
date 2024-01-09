@@ -106,17 +106,15 @@ criteriaTable.on('rowAdded', (row) => {
   $('#class-tables').children('.table-container').each((_index, container) => {
     const $container = $(container);
     const containerId = $container.attr('id');
-
     const table = tables[containerId];
-    const criteriaField = `criteria-${rowId}`;
 
-    table.addColumn({
-      field: criteriaField,
-      headerSortTristate: true,
-      vertAlign: 'middle',
-    }).then(() => {
-      table.scrollToColumn(criteriaField);
-    });
+    const criteriaField = `criteria-${rowId}`;
+    const criteriaTitle = undefined;
+    const criteriaCalc = undefined;
+    const criteriaColumn = getQualityColumn(criteriaField, criteriaTitle, criteriaCalc);
+
+    table.addColumn(criteriaColumn)
+      .then(() => table.scrollToColumn(criteriaField));
   });
 });
 
@@ -246,10 +244,7 @@ function updateQualityColumnData($classesContainer, criteriaField, criteriaError
   }
 
   classesData.forEach((row) => {
-    const currentValue = row[criteriaField];
-
     const { newValue, errors } = resolveQualityExpression(
-      currentValue,
       expression,
       roomsContainerId,
       row,
@@ -263,9 +258,9 @@ function updateQualityColumnData($classesContainer, criteriaField, criteriaError
   });
 }
 
-function resolveQualityExpression(value, expression, roomsContainerId, classData, roomsData, classFieldsData, roomFieldsData) {
+function resolveQualityExpression(expression, roomsContainerId, classData, roomsData, classFieldsData, roomFieldsData) {
   if (classData.id === 0 || !expression) {
-    return { newValue: value, errors: [] };
+    return { newValue: undefined, errors: [] };
   }
 
   const { newExpression, errors, roomData } = replaceExpression(
@@ -278,7 +273,7 @@ function resolveQualityExpression(value, expression, roomsContainerId, classData
   );
 
   if (errors.length > 0) {
-    return { newValue: value, errors };
+    return { newValue: undefined, errors };
   }
 
   let newValue;
@@ -286,7 +281,7 @@ function resolveQualityExpression(value, expression, roomsContainerId, classData
   try {
     newValue = eval(newExpression);
   } catch (err) {
-    newValue = value;
+    newValue = undefined;
     errors.push(err.message);
   }
 
@@ -730,10 +725,12 @@ function loadTable(selector, fields, data, errors) {
   const columns = getColumns(fields, tableFields);
   const qualityColumns = getQualityColumns(tableType);
   const tableColumns = [...columns, ...qualityColumns];
-  const ignoredColumns = ['id', 'errors'];
+  
+  const ignoredColumnFields = ['id', 'errors'];
+  const nonIgnoredColumns = columns.filter((col) => !ignoredColumnFields.includes(col.field));
 
   const autoAssignedColumns = columns.filter((col) => {
-    return !ignoredColumns.includes(col.field) && col.field !== col.title;
+    return !ignoredColumnFields.includes(col.field) && col.field !== col.title && col.visible !== false;
   });
 
   const tableData = [{}, ...data].map((row, index) => ({
@@ -751,6 +748,8 @@ function loadTable(selector, fields, data, errors) {
       delete row[title];
     });
   });
+
+  addOriginalFields(nonIgnoredColumns, tableData, tableFields);
 
   if (tableType === 'classes') {
     const $table = $(selector);
@@ -810,9 +809,15 @@ function createTable(selector, columns, data) {
 
   if (tableType === 'classes') {
     addQualityTrace($tableContainer);
-    
-    table.on('tableBuilt', () => updateQualityData($tableContainer));
   }
+
+  table.on('tableBuilt', () => {
+    if (tableType === 'classes') {
+      updateQualityData($tableContainer);
+    } else {
+      updateQualityReferencedByRoom($tableContainer);
+    }
+  });
 
   table.on('cellEdited', (cell) => cellEdited(cell));
 }
@@ -827,6 +832,7 @@ function cellEdited(cell) {
 
   const cellField = cell.getField();
   const cellValue = cell.getValue();
+  const originalCellField = `${cellField}-original`;
 
   const tableId = table.element.id;
   const tableType = tableId.split('-', 1)[0];
@@ -836,37 +842,66 @@ function cellEdited(cell) {
     return tableFields[key].title === cellValue;
   }) ?? columnTitle;
 
-  const formatter = tableFields[fieldName]?.formatter;
-  const formatterParams = tableFields[fieldName]?.formatterParams;
+  const originalFieldName = `${fieldName}-original`;
+  const tableField = tableFields[fieldName];
+
+  let formatter = tableField?.formatter;
+  const formatterParams = tableField?.formatterParams;
+  
+  const fieldType = tableField?.type;
+  const fieldTypeParams = tableField?.typeParams;
+
+  const hozAlign = tableField?.hozAlign;
+
+  if (formatter === 'datetime' && fieldType === 'DateTime') {
+    formatter = datetimeFormatter;
+  }
 
   const newData = data.map((row) => {
-    const newRow = {
-      ...row,
-      [fieldName]: row[cellField],
-    };
-    
+    const cellValue = row[cellField];
+    const originalCellValue = row[originalCellField];
+    let newRow;
+
+    if (row.id === 0) {
+      newRow = {
+        ...row,
+        [fieldName]: cellValue,
+      };
+    } else {
+      newRow = {
+        ...row,
+        [fieldName]: convertTo(fieldType, fieldTypeParams, originalCellValue),
+        [originalFieldName]: originalCellValue,
+      };
+    }
+
     delete newRow[cellField];
+    delete newRow[originalCellField];
+
     return newRow;
   });
 
-  const updateDefinition = {
-    field: fieldName,
-    formatter,
-    formatterParams,
-  };
+  const $table = $(table.element);
+  const $container = $table.closest('.table-container');
+
+  if (tableType === 'classes') {
+    updateAllQualityColumns($container, newData);
+  }
 
   table.replaceData(newData)
     .then(() => {
+      const updateDefinition = {
+        field: fieldName,
+        formatter,
+        formatterParams,
+        hozAlign,
+      };
+
       table.updateColumnDefinition(cellField, updateDefinition)
         .then(() => {
           table.scrollToColumn(fieldName);
 
-          const $table = $(table.element);
-          const $container = $table.closest('.table-container');
-
-          if (tableType === 'classes') {
-            updateAllQualityColumns($container, newData);
-          } else {
+          if (tableType === 'rooms') {
             updateQualityReferencedByRoom($container);
           }
         });
@@ -878,9 +913,15 @@ function updateTable(selector, columns, data) {
   const $tableContainer = $table.closest('.table-container');
   const containerId = $tableContainer.attr('id');
   const table = tables[containerId];
+  const tableType = containerId.split('-', 1)[0];
 
   table.setColumns(columns);
-  table.setData(data);
+  table.setData(data)
+    .then(() => {
+      if (tableType === 'rooms') {
+        updateQualityReferencedByRoom($tableContainer);
+      }
+    });
 }
 
 function getColumns(fields, tableFields) {
@@ -937,8 +978,16 @@ function qualityFormatter(cell) {
 
 function getColumn(title, tableFields) {
   const field = getColumnField(title, tableFields);
-  const formatter = tableFields[field]?.formatter;
-  const formatterParams = tableFields[field]?.formatterParams;
+  const tableField = tableFields[field];
+
+  let formatter = tableField?.formatter;
+  const formatterParams = tableField?.formatterParams;
+  const type = tableField?.type;
+  const hozAlign = tableField?.hozAlign;
+
+  if (formatter === 'datetime' && type === 'DateTime') {
+    formatter = datetimeFormatter;
+  }
 
   return {
     field,
@@ -946,6 +995,7 @@ function getColumn(title, tableFields) {
     formatter,
     formatterParams,
     headerSortTristate: true,
+    hozAlign,
     vertAlign: 'middle',
     editable,
     editor: 'list',
@@ -1042,32 +1092,29 @@ function getQualityColumns(tableType) {
   }
 
   const criteriaData = criteriaTable.getData();
-  const columns = [];
 
-  criteriaData.forEach((row) => {
+  return criteriaData.map((row) => {
     const criteriaField = `criteria-${row.id}`;
-    const criteriaErrorsField = `criteria-${row.id}-errors`;
+    const criteriaTitle = row.name;
+    const criteriaCalc = row.aggregator?.toLowerCase();
 
-    columns.push({
-      field: criteriaField,
-      title: row.name,
-      formatter: qualityFormatter,
-      bottomCalc: row.aggregator?.toLowerCase(),
-      bottomCalcFormatter: qualityCalcFormatter,
-      tooltip: (_, cell) => {
-        return getQualityTooltip(cell);
-      },
-      headerSortTristate: true,
-      vertAlign: 'middle',
-    });
-
-    columns.push({
-      field: criteriaErrorsField,
-      visible: false,
-    });
+    return getQualityColumn(criteriaField, criteriaTitle, criteriaCalc);
   });
+}
 
-  return columns;
+function getQualityColumn(field, title, bottomCalc) {
+  return {
+    field,
+    title,
+    formatter: qualityFormatter,
+    bottomCalc,
+    bottomCalcFormatter: qualityCalcFormatter,
+    tooltip: (_, cell) => {
+      return getQualityTooltip(cell);
+    },
+    headerSortTristate: true,
+    vertAlign: 'middle',
+  };
 }
 
 function qualityCalcFormatter(cell) {
@@ -1125,8 +1172,8 @@ function replaceExpression(expression, roomsContainerId, classData, roomsData, c
   const entityKeys = Object.keys(entities);
   const errors = [];
 
-  const convertedClassRoom = autoAssignStringConversion(classData.roomName);
-  const roomNameTitle = entities['Sala'].fields['roomNameB'].title;
+  const convertedClassroom = autoAssignStringConversion(classData.classroom);
+  const roomNameTitle = entities['Sala'].fields['roomName'].title;
   const convertedRoomTitle = autoAssignStringConversion(roomNameTitle);
   let roomEntityReferenced = false;
 
@@ -1177,13 +1224,13 @@ function replaceExpression(expression, roomsContainerId, classData, roomsData, c
 
   let roomData;
   if (errors.length === 0 && roomEntityReferenced) {
-    roomData = roomsData.find((row) => autoAssignStringConversion(row.roomNameB) === convertedClassRoom);
-    const classRoomTitle = entities['Aula'].fields['roomName'].title;
+    roomData = roomsData.find((row) => autoAssignStringConversion(row.roomName) === convertedClassroom);
+    const classroomTitle = entities['Aula'].fields['classroom'].title;
 
-    if (!convertedClassRoom) {
-      errors.push(`Campo '${classRoomTitle}' não tem valor para esta aula.`);
+    if (!convertedClassroom) {
+      errors.push(`Campo '${classroomTitle}' não tem valor para esta aula.`);
     } else if (!roomData) {
-      errors.push(`Campo '${classRoomTitle}' com o valor '${classData.roomName}' não tem qualquer correspondência na tabela de salas.`);
+      errors.push(`Campo '${classroomTitle}' com o valor '${classData.classroom}' não tem qualquer correspondência na tabela de salas.`);
     }
   }
 
@@ -1194,22 +1241,84 @@ function getFilledFields(fieldsData) {
   return Object.values(fieldsData).filter((field) => field);
 }
 
-function convertTo(formatter, value) {
+function convertTo(type, typeParams, value) {
+  if (!type) {
+    return value;
+  }
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (value === null) {
+    return null;
+  }
+
   let newValue = value;
 
-  switch (formatter) {
+  switch (type) {
     case 'String':
       newValue = String(value);
       break;
     case 'Number':
       newValue = Number(value);
       break;
+    case 'DateTime':
+      if (!typeParams?.format) {
+        return value;
+      }
+
+      newValue = luxon.DateTime.fromFormat(value, typeParams.format);
+      break;
+    case 'Boolean':
+      if (!value) {
+        return undefined;
+      }  
+
+      const trueValue = typeParams?.trueValue;
+      newValue = trueValue ? value === trueValue : Boolean(value);
+
+      break;
     default:
-      throw new Error(`Formatter '${formatter}' is not defined.`);
+      return value;
   }
 
   return newValue;
 }
 
-// TODO: Error tooltips and cell format as error
+function addOriginalFields(columns, data, tableFields) {
+  columns.forEach((col) => {
+    const field = col.field;
+    const originalField = `${field}-original`;
+
+    const tableField = tableFields[field];
+    const fieldType = tableField.type;
+    const fieldTypeParams = tableField.typeParams;
+
+    data.forEach((row) => {
+      if (row.id === 0) {
+        return;
+      }
+
+      const value = row[field];
+
+      row[field] = convertTo(fieldType, fieldTypeParams, value);
+      row[originalField] = value;
+    });
+  });
+}
+
+function datetimeFormatter(cell, formatterParams) {
+  const data = cell.getData();
+  const cellValue = cell.getValue();
+
+  if (data.id === 0) {
+    return cellValue;
+  }
+
+  const outputFormat = formatterParams?.outputFormat;
+  return outputFormat ? cellValue?.toFormat(outputFormat) : cellValue?.toString();
+}
+
 // TODO: Convert column to correct type
+// TODO: Plot heatmap

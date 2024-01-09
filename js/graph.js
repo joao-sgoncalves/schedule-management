@@ -1,5 +1,6 @@
 $(document).ready(() => {
   createQualityChart();
+  createScheduleHeatmap();
 });
 
 function createQualityChart() {
@@ -55,8 +56,7 @@ function updateQualityData($container) {
   };
 
   const traceIndex = $container.index();
-  
-  console.log('update', update);
+
   Plotly.restyle('quality-chart', update, traceIndex);
 }
 
@@ -71,4 +71,30 @@ function updateQualityTraceName($container) {
 
 function removeQualityTrace(traceIndex) {
   Plotly.deleteTraces('quality-chart', traceIndex);
+}
+
+function createScheduleHeatmap() {
+  const data = [
+    {
+      name: 'Horário 1',
+      x: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+      y: ['08:00 - 10:00', '10:00 - 12:00', '12:00 - 14:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00'],
+      z: [[1, 2, 3, 4, 5], [2, 3, 4, 5, 1], [3, 4, 1, 2, 1], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3]],
+      type: 'heatmap',
+    },
+  ];
+
+  const layout = {
+    title: 'Distribuição de aulas por salas',
+    xaxis: {
+      title: 'Critério',
+    },
+    yaxis: {
+      title: 'Valor',
+    },
+  };
+
+  const config = { responsive: true };
+
+  Plotly.newPlot('schedule-heatmap', data, layout, config);
 }
