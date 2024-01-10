@@ -553,11 +553,22 @@ $('body').on('click', '.download-table-btn', (event) => {
 
   if (dataFileExtension === 'csv') {
     const parseMeta = parseMetas[containerId];
+    const metaFields = parseMeta.fields;
+    const definitions = table.getColumnDefinitions();
+
+    metaFields.forEach((field) => {
+      const fieldDefinition = definitions.find((definition) => definition.title === field);
+      const columnField = fieldDefinition.field;
+      const originalColumnField = `${columnField}-original`;
+
+      dataToDownload.forEach((row) => row[field] = row[originalColumnField]);
+    });
+
     const config = {
       delimiter: parseMeta.delimiter,
       header: true,
       linebreak: parseMeta.newline,
-      columns: parseMeta.fields,
+      columns: metaFields,
     };
 
     downloadCsv(filename, dataToDownload, config);
