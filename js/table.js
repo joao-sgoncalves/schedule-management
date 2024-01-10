@@ -27,6 +27,7 @@ function createCriteriaTable() {
     layoutColumnsOnNewData: true,
     placeholder: 'Sem Dados',
     resizableRows: true,
+    movableRows: true,
   };
 
   const table = new Tabulator($table[0], options);
@@ -43,6 +44,7 @@ function getCriteriaColumns() {
       sorter: 'number',
       headerSortTristate: true,
       vertAlign: 'middle',
+      headerFilter: 'number',
     },
     {
       title: 'Nome',
@@ -51,14 +53,49 @@ function getCriteriaColumns() {
       sorter: 'string',
       headerSortTristate: true,
       vertAlign: 'middle',
+      headerFilter: 'input',
     },
     {
       title: 'Expressão',
       field: 'expression',
-      editor: 'input',
+      editor: (cell, onRendered, success, cancel) => {
+        const cellElement = cell.getElement();
+        const cellValue = cell.getValue();
+
+        const codeEditor = CodeMirror(cellElement, {
+          value: cellValue,
+          mode: 'javascript',
+          tabSize: 2,
+          extraKeys: {
+            "Esc": cancel,
+            "Ctrl-Space": "autocomplete",
+          },
+          allowDropFileTypes: ['text/javascript'],
+          autofocus: true,
+        });
+
+        codeEditor.setSize('100%', '100%');
+
+        onRendered(() => {
+          codeEditor.focus();
+          codeEditor.setCursor(Infinity, Infinity);
+        });
+
+        codeEditor.on('blur', () => {
+          const value = codeEditor.getValue();
+          success(value);
+        });
+
+        codeEditor.on('keydown', (_instance, event) => {
+          event.stopPropagation();
+        });
+
+        return codeEditor.getWrapperElement();
+      },
       sorter: 'string',
       headerSortTristate: true,
       vertAlign: 'middle',
+      headerFilter: 'input',
     },
     {
       title: 'Agregador',
@@ -75,6 +112,15 @@ function getCriteriaColumns() {
       sorter: 'string',
       headerSortTristate: true,
       vertAlign: 'middle',
+      headerFilter: 'list',
+      headerFilterParams: {
+        values: ['AVG', 'MAX', 'MIN', 'SUM', 'CONCAT', 'COUNT', 'UNIQUE'],
+        clearable: true,
+        placeholderEmpty: 'Sem Resultados',
+        autocomplete: true,
+        allowEmpty: true,
+        listOnEmpty: true,
+      },
     },
     {
       field: 'delete',
@@ -864,6 +910,8 @@ function cellEdited(cell) {
   const fieldTypeParams = tableField?.typeParams;
 
   const hozAlign = tableField?.hozAlign;
+  const headerFilter = tableField?.headerFilter;
+  const headerFilterParams = tableField?.headerFilterParams;
 
   if (formatter === 'datetime' && fieldType === 'DateTime') {
     formatter = datetimeFormatter;
@@ -909,6 +957,8 @@ function cellEdited(cell) {
         },
         formatterParams,
         hozAlign,
+        headerFilter,
+        headerFilterParams,
       };
 
       table.updateColumnDefinition(cellField, updateDefinition)
@@ -949,6 +999,7 @@ function getColumns(fields, tableFields) {
     sorter: 'number',
     headerSortTristate: true,
     vertAlign: 'middle',
+    headerFilter: 'number',
   };
   columns.unshift(idColumn);
 
@@ -958,6 +1009,7 @@ function getColumns(fields, tableFields) {
     headerSortTristate: true,
     vertAlign: 'middle',
     formatter: 'textarea',
+    headerFilter: 'input',
   };
   columns.push(errorsColumn);
 
@@ -998,6 +1050,9 @@ function getColumn(title, tableFields) {
   const formatterParams = tableField?.formatterParams;
   const type = tableField?.type;
   const hozAlign = tableField?.hozAlign;
+  
+  const headerFilter = tableField?.headerFilter;
+  const headerFilterParams = tableField?.headerFilterParams;
 
   if (formatter === 'datetime' && type === 'DateTime') {
     formatter = datetimeFormatter;
@@ -1023,6 +1078,8 @@ function getColumn(title, tableFields) {
       allowEmpty: true,
       listOnEmpty: true,
     },
+    headerFilter,
+    headerFilterParams,
   };
 }
 
@@ -1130,6 +1187,7 @@ function getQualityColumn(field, title, bottomCalc) {
     },
     headerSortTristate: true,
     vertAlign: 'middle',
+    headerFilter: 'input',
   };
 }
 
@@ -1371,5 +1429,6 @@ function columnFormatter(cell, formatterParams, formatter) {
   return formatterFunc(cell, formatterParams);
 }
 
-// TODO: Validate that the class is associated to a room
+// TODO: Fix filter for Start, End and Day columns
+// TODO: Fix selection causes blur of editor
 // TODO: Plot heatmap

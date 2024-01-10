@@ -6,36 +6,42 @@ var config = {
         formatter: 'plaintext',
         type: 'String',
         hozAlign: 'left',
+        headerFilter: 'input',
       },
       executionUnit: {
         title: 'Unidade de execução',
         formatter: 'plaintext',
         type: 'String',
         hozAlign: 'left',
+        headerFilter: 'input',
       },
       shift: {
         title: 'Turno',
         formatter: 'plaintext',
         type: 'String',
         hozAlign: 'left',
+        headerFilter: 'input',
       },
       class: {
         title: 'Turma',
         formatter: 'plaintext',
         type: 'String',
         hozAlign: 'left',
+        headerFilter: 'input',
       },
       registeredOnShift: {
         title: 'Inscritos no turno',
         formatter: 'plaintext',
         type: 'Number',
         hozAlign: 'right',
+        headerFilter: 'input',
       },
       dayOfTheWeek: {
         title: 'Dia da Semana',
         formatter: 'plaintext',
         type: 'String',
         hozAlign: 'right',
+        headerFilter: 'input',
       },
       start: {
         title: 'Início',
@@ -48,6 +54,10 @@ var config = {
           format: 'HH:mm:ss',
         },
         hozAlign: 'center',
+        headerFilter: 'time',
+        headerFilterParams: {
+          format: true,
+        },
       },
       end: {
         title: 'Fim',
@@ -60,6 +70,10 @@ var config = {
           format: 'HH:mm:ss',
         },
         hozAlign: 'center',
+        headerFilter: 'time',
+        headerFilterParams: {
+          format: true,
+        },
       },
       day: {
         title: 'Dia',
@@ -72,30 +86,38 @@ var config = {
           format: 'dd/MM/yyyy',
         },
         hozAlign: 'center',
+        headerFilter: 'date',
+        headerFilterParams: {
+          format: true,
+        },
       },
       requestedRoomCharacteristics: {
         title: 'Características da sala pedida para a aula',
         formatter: 'plaintext',
         type: 'String',
         hozAlign: 'left',
+        headerFilter: 'input',
       },
       classroom: {
         title: 'Sala da aula',
         formatter: 'plaintext',
         type: 'String',
         hozAlign: 'left',
+        headerFilter: 'input',
       },
       capacity: {
         title: 'Lotação',
         formatter: 'plaintext',
         type: 'Number',
         hozAlign: 'right',
+        headerFilter: 'number',
       },
       actualRoomCharacteristics: {
         title: 'Características reais da sala',
         formatter: 'plaintext',
         type: 'String',
         hozAlign: 'left',
+        headerFilter: 'input',
       },
     },
     rooms: {
@@ -104,30 +126,35 @@ var config = {
         formatter: 'plaintext',
         type: 'String',
         hozAlign: 'left',
+        headerFilter: 'input',
       },
       roomName: {
         title: 'Nome sala',
         formatter: 'plaintext',
         type: 'String',
         hozAlign: 'left',
+        headerFilter: 'input',
       },
       normalCapacity: {
         title: 'Capacidade Normal',
         formatter: 'plaintext',
         type: 'Number',
         hozAlign: 'right',
+        headerFilter: 'number',
       },
       examCapacity: {
         title: 'Capacidade Exame',
         formatter: 'plaintext',
         type: 'Number',
         hozAlign: 'right',
+        headerFilter: 'number',
       },
       numberOfCharacteristics: {
         title: 'Nº características',
         formatter: 'plaintext',
         type: 'Number',
         hozAlign: 'right',
+        headerFilter: 'number',
       },
       amphitheaterClasses: {
         title: 'Anfiteatro aulas',
@@ -140,6 +167,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       technicalSupportEvents: {
         title: 'Apoio técnico eventos',
@@ -152,6 +183,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       arq1: {
         title: 'Arq 1',
@@ -164,6 +199,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       arq2: {
         title: 'Arq 2',
@@ -176,6 +215,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       arq3: {
         title: 'Arq 3',
@@ -188,6 +231,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       arq4: {
         title: 'Arq 4',
@@ -200,6 +247,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       arq5: {
         title: 'Arq 5',
@@ -212,6 +263,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       arq6: {
         title: 'Arq 6',
@@ -224,6 +279,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       arq9: {
         title: 'Arq 9',
@@ -236,6 +295,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       byod: {
         title: 'BYOD (Bring Your Own Device)',
@@ -248,6 +311,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       focusGroup: {
         title: 'Focus Group',
@@ -260,6 +327,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       roomScheduleVisible: {
         title: 'Horário sala visível portal público',
@@ -272,6 +343,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       computerArchitectureLab1: {
         title: 'Laboratório de Arquitectura de Computadores I',
@@ -284,6 +359,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       computerArchitectureLab2: {
         title: 'Laboratório de Arquitectura de Computadores II',
@@ -296,6 +375,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       engineeringBasesLab: {
         title: 'Laboratório de Bases de Engenharia',
@@ -308,6 +391,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       electronicsLab: {
         title: 'Laboratório de Electrónica',
@@ -320,6 +407,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       computerLab: {
         title: 'Laboratório de Informática',
@@ -332,6 +423,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       journalismLab: {
         title: 'Laboratório de Jornalismo',
@@ -344,6 +439,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       computerNetworksLab1: {
         title: 'Laboratório de Redes de Computadores I',
@@ -356,6 +455,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       computerNetworksLab2: {
         title: 'Laboratório de Redes de Computadores II',
@@ -368,6 +471,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       telecommunicationsLab: {
         title: 'Laboratório de Telecomunicações',
@@ -380,6 +487,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       mastersClassroom: {
         title: 'Sala Aulas Mestrado',
@@ -392,6 +503,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       mastersClassroomPlus: {
         title: 'Sala Aulas Mestrado Plus',
@@ -404,6 +519,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       neeRoom: {
         title: 'Sala NEE',
@@ -416,6 +535,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       examRoom: {
         title: 'Sala Provas',
@@ -428,6 +551,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       meetingRoom: {
         title: 'Sala Reunião',
@@ -440,6 +567,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       architectureRoom: {
         title: 'Sala de Arquitectura',
@@ -452,6 +583,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       normalClassroom: {
         title: 'Sala de Aulas normal',
@@ -464,6 +599,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       videoconference: {
         title: 'videoconferencia',
@@ -476,6 +615,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
       atrium: {
         title: 'Átrio',
@@ -488,6 +631,10 @@ var config = {
           trueValue: 'X',
         },
         hozAlign: 'center',
+        headerFilter: 'tickCross',
+        headerFilterParams: {
+          tristate: true,
+        },
       },
     },
   },
