@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Schedule Management</title>
+
+    <!-- Bootstrap -->
+    <link rel="stylesheet" href="lib/bootstrap/css/bootstrap.css">
+
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="lib/bootstrap-icons/css/bootstrap-icons.css">
+
+    <!-- Tabulator -->
+    <link rel="stylesheet" href="lib/tabulator/css/tabulator_bootstrap5.css">
+
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="lib/codemirror/css/codemirror.css">
+    <link rel="stylesheet" href="lib/codemirror/addon/hint/show-hint.css">
+    <link rel="stylesheet" href="lib/codemirror/addon/lint/lint.css">
+
+    <!-- Custom -->
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body>
+    <div class="container">
+      <!-- Quality Criteria -->
+      <div id="criteria-container" class="table-container d-inline-block mw-100 my-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="table-name me-3">Critérios de Qualidade</h5>
+          <div class="d-flex">
+            <button
+              class="start-btn btn btn-outline-success"
+              type="button"
+              data-bs-toggle="tooltip"
+              data-bs-title="Gerar Horários"
+            >
+              <i class="bi bi-play"></i>
+            </button>
+          </div>
+        </div>
+        <div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="overlapping" checked>
+            <label class="form-check-label" for="overlapping">Sobreposições</label>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="overcrowded" checked>
+            <label class="form-check-label" for="over-crowded">Superlotação</label>
+          </div>
+          <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="characteristics" checked>
+            <label class="form-check-label" for="characteristics">Características Pedidas</label>
+          </div>
+          <div class="mb-1">
+            <label for="pop-size" class="form-label">Tamanho da População</label>
+            <input type="number" step="10" class="form-control" id="pop-size" value="50">
+          </div>
+          <div class="mb-1">
+            <label for="generations" class="form-label">Gerações</label>
+            <input type="number" class="form-control" id="generations" value="10">
+          </div>
+        </div>
+      </div>
+
+      <!-- Room Tables -->
+      <div class="mb-4">
+        <div class="row">
+          <div class="col-auto">
+            <h5 class="mb-3">Tabelas de Salas</h5>
+            <button id="upload-rooms-btn" class="btn btn-outline-primary" type="button">
+              Carregar tabelas
+              <i class="bi bi-upload ms-1"></i>
+            </button>
+            <input
+              id="rooms-input"
+              type="file"
+              accept="text/csv"
+              multiple
+              hidden
+            >
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-auto">
+            <div id="room-tables" class="tables-container" data-name-selects="#class-tables"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Class Tables -->
+      <div class="mb-4">
+        <div class="row">
+          <div class="col-auto">
+            <h5 class="mb-3">Tabelas de Horários</h5>
+            <button id="upload-classes-btn" class="btn btn-outline-primary" type="button">
+              Carregar tabelas
+              <i class="bi bi-upload ms-1"></i>
+            </button>
+            <input
+              id="classes-input"
+              type="file"
+              accept="text/csv"
+              multiple
+              hidden
+            >
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-auto">
+            <div id="class-tables" class="tables-container"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Class Tables -->
+      <div class="mb-4">
+        <div class="row">
+          <div class="col-auto">
+            <h5 class="mb-3">Tabelas de Resultados</h5>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-auto">
+            <div id="result-tables" class="tables-container"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quality Chart -->
+      <div class="row mb-4">
+        <div class="col">
+          <div id="overlapping-chart"></div>
+        </div>
+      </div>
+      <div class="row mb-4">
+        <div class="col">
+          <div id="overcrowded-chart"></div>
+        </div>
+      </div>
+      <div class="row mb-4">
+        <div class="col">
+          <div id="characteristics-chart"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="lib/jquery/js/jquery.js"></script>
+
+    <!-- Bootstrap -->
+    <script src="lib/bootstrap/js/bootstrap.bundle.js"></script>
+
+    <!-- Papa Parse -->
+    <script src="lib/papaparse/js/papaparse.js"></script>
+
+    <!-- Tabulator -->
+    <script src="lib/tabulator/js/tabulator.js"></script>
+
+    <!-- CodeMirror -->
+    <script src="lib/codemirror/js/codemirror.js"></script>
+    <script src="lib/codemirror/mode/javascript.js"></script>
+    <script src="lib/codemirror/addon/hint/show-hint.js"></script>
+    <script src="lib/codemirror/addon/hint/javascript-hint.js"></script>
+    <script src="lib/codemirror/addon/lint/lint.js"></script>
+    <script src="lib/codemirror/addon/lint/javascript-lint.js"></script>
+
+    <!-- Plotly -->
+    <script src="lib/plotly/js/plotly.js"></script>
+
+    <!-- Custom -->
+    <script src="js/config-genetic.js"></script>
+    <script src="js/genetic-table.js"></script>
+    <script src="js/genetic-graph.js"></script>
+    <script src="js/genetic.js"></script>
+  </body>
+</html>
