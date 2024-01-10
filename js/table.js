@@ -749,7 +749,8 @@ function loadTable(selector, fields, data, errors) {
     });
   });
 
-  addOriginalFields(nonIgnoredColumns, tableData, tableFields);
+  addOriginalFields(nonIgnoredColumns, tableData);
+  convertToDataTypes(autoAssignedColumns, tableData, tableFields);
 
   if (tableType === 'classes') {
     const $table = $(selector);
@@ -892,7 +893,9 @@ function cellEdited(cell) {
     .then(() => {
       const updateDefinition = {
         field: fieldName,
-        formatter,
+        formatter: (cell, formatterParams) => {
+          return columnFormatter(cell, formatterParams, formatter);
+        },
         formatterParams,
         hozAlign,
       };
@@ -992,7 +995,9 @@ function getColumn(title, tableFields) {
   return {
     field,
     title,
-    formatter,
+    formatter: (cell, formatterParams) => {
+      return columnFormatter(cell, formatterParams, formatter);
+    },
     formatterParams,
     headerSortTristate: true,
     hozAlign,
@@ -1286,12 +1291,27 @@ function convertTo(type, typeParams, value) {
   return newValue;
 }
 
-function addOriginalFields(columns, data, tableFields) {
+function addOriginalFields(columns, data) {
   columns.forEach((col) => {
     const field = col.field;
     const originalField = `${field}-original`;
 
+    data.forEach((row) => {
+      if (row.id === 0) {
+        return;
+      }
+
+      const value = row[field];
+      row[originalField] = value;
+    });
+  });
+}
+
+function convertToDataTypes(columns, data, tableFields) {
+  columns.forEach((col) => {
+    const field = col.field;
     const tableField = tableFields[field];
+
     const fieldType = tableField.type;
     const fieldTypeParams = tableField.typeParams;
 
@@ -1301,9 +1321,7 @@ function addOriginalFields(columns, data, tableFields) {
       }
 
       const value = row[field];
-
       row[field] = convertTo(fieldType, fieldTypeParams, value);
-      row[originalField] = value;
     });
   });
 }
@@ -1320,5 +1338,27 @@ function datetimeFormatter(cell, formatterParams) {
   return outputFormat ? cellValue?.toFormat(outputFormat) : cellValue?.toString();
 }
 
-// TODO: Convert column to correct type
+function columnFormatter(cell, formatterParams, formatter) {
+  const cellValue = cell.getValue();
+  const data = cell.getData();
+
+  if (data.id === 0) {
+    return cellValue;
+  }
+
+  let formatterFunc;
+
+  if (formatter instanceof Function) {
+    formatterFunc = formatter;
+  } else {
+    const table = cell.getTable();
+    const formatModule = table.modules.format;
+  
+    formatterFunc = formatModule.getFormatter(formatter).bind(formatModule);
+  }
+
+  return formatterFunc(cell, formatterParams);
+}
+
+// TODO: Validate that the class is associated to a room
 // TODO: Plot heatmap

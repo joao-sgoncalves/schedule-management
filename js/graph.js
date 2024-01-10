@@ -1,6 +1,6 @@
 $(document).ready(() => {
   createQualityChart();
-  createScheduleHeatmap();
+  // createScheduleHeatmap();
 });
 
 function createQualityChart() {
