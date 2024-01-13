@@ -7,6 +7,7 @@ var config = {
         type: 'String',
         hozAlign: 'left',
         headerFilter: 'input',
+        sorter: 'string',
       },
       executionUnit: {
         title: 'Unidade de execução',
@@ -14,6 +15,7 @@ var config = {
         type: 'String',
         hozAlign: 'left',
         headerFilter: 'input',
+        sorter: 'string',
       },
       shift: {
         title: 'Turno',
@@ -21,6 +23,7 @@ var config = {
         type: 'String',
         hozAlign: 'left',
         headerFilter: 'input',
+        sorter: 'string',
       },
       class: {
         title: 'Turma',
@@ -28,6 +31,7 @@ var config = {
         type: 'String',
         hozAlign: 'left',
         headerFilter: 'input',
+        sorter: 'string',
       },
       registeredOnShift: {
         title: 'Inscritos no turno',
@@ -35,6 +39,7 @@ var config = {
         type: 'Number',
         hozAlign: 'right',
         headerFilter: 'input',
+        sorter: 'number',
       },
       dayOfTheWeek: {
         title: 'Dia da Semana',
@@ -42,6 +47,7 @@ var config = {
         type: 'String',
         hozAlign: 'right',
         headerFilter: 'input',
+        sorter: 'string',
       },
       start: {
         title: 'Início',
@@ -58,6 +64,7 @@ var config = {
         headerFilterParams: {
           format: true,
         },
+        sorter: 'time',
       },
       end: {
         title: 'Fim',
@@ -74,6 +81,7 @@ var config = {
         headerFilterParams: {
           format: true,
         },
+        sorter: 'time',
       },
       day: {
         title: 'Dia',
@@ -90,6 +98,7 @@ var config = {
         headerFilterParams: {
           format: true,
         },
+        sorter: 'date',
       },
       requestedRoomCharacteristics: {
         title: 'Características da sala pedida para a aula',
@@ -97,6 +106,7 @@ var config = {
         type: 'String',
         hozAlign: 'left',
         headerFilter: 'input',
+        sorter: 'string',
       },
       classroom: {
         title: 'Sala da aula',
@@ -104,6 +114,7 @@ var config = {
         type: 'String',
         hozAlign: 'left',
         headerFilter: 'input',
+        sorter: 'string',
       },
       capacity: {
         title: 'Lotação',
@@ -111,6 +122,7 @@ var config = {
         type: 'Number',
         hozAlign: 'right',
         headerFilter: 'number',
+        sorter: 'number',
       },
       actualRoomCharacteristics: {
         title: 'Características reais da sala',
@@ -118,6 +130,7 @@ var config = {
         type: 'String',
         hozAlign: 'left',
         headerFilter: 'input',
+        sorter: 'string',
       },
     },
     rooms: {
@@ -127,6 +140,7 @@ var config = {
         type: 'String',
         hozAlign: 'left',
         headerFilter: 'input',
+        sorter: 'string',
       },
       roomName: {
         title: 'Nome sala',
@@ -134,6 +148,7 @@ var config = {
         type: 'String',
         hozAlign: 'left',
         headerFilter: 'input',
+        sorter: 'string',
       },
       normalCapacity: {
         title: 'Capacidade Normal',
@@ -141,6 +156,7 @@ var config = {
         type: 'Number',
         hozAlign: 'right',
         headerFilter: 'number',
+        sorter: 'number',
       },
       examCapacity: {
         title: 'Capacidade Exame',
@@ -148,6 +164,7 @@ var config = {
         type: 'Number',
         hozAlign: 'right',
         headerFilter: 'number',
+        sorter: 'number',
       },
       numberOfCharacteristics: {
         title: 'Nº características',
@@ -155,6 +172,7 @@ var config = {
         type: 'Number',
         hozAlign: 'right',
         headerFilter: 'number',
+        sorter: 'number',
       },
       amphitheaterClasses: {
         title: 'Anfiteatro aulas',
@@ -171,6 +189,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       technicalSupportEvents: {
         title: 'Apoio técnico eventos',
@@ -187,6 +206,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       arq1: {
         title: 'Arq 1',
@@ -203,6 +223,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       arq2: {
         title: 'Arq 2',
@@ -219,6 +240,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       arq3: {
         title: 'Arq 3',
@@ -235,6 +257,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       arq4: {
         title: 'Arq 4',
@@ -251,6 +274,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       arq5: {
         title: 'Arq 5',
@@ -267,6 +291,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       arq6: {
         title: 'Arq 6',
@@ -283,6 +308,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       arq9: {
         title: 'Arq 9',
@@ -299,6 +325,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       byod: {
         title: 'BYOD (Bring Your Own Device)',
@@ -315,6 +342,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       focusGroup: {
         title: 'Focus Group',
@@ -331,6 +359,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       roomScheduleVisible: {
         title: 'Horário sala visível portal público',
@@ -347,6 +376,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       computerArchitectureLab1: {
         title: 'Laboratório de Arquitectura de Computadores I',
@@ -363,6 +393,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       computerArchitectureLab2: {
         title: 'Laboratório de Arquitectura de Computadores II',
@@ -379,6 +410,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       engineeringBasesLab: {
         title: 'Laboratório de Bases de Engenharia',
@@ -395,6 +427,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       electronicsLab: {
         title: 'Laboratório de Electrónica',
@@ -411,6 +444,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       computerLab: {
         title: 'Laboratório de Informática',
@@ -427,6 +461,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       journalismLab: {
         title: 'Laboratório de Jornalismo',
@@ -443,6 +478,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       computerNetworksLab1: {
         title: 'Laboratório de Redes de Computadores I',
@@ -459,6 +495,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       computerNetworksLab2: {
         title: 'Laboratório de Redes de Computadores II',
@@ -475,6 +512,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       telecommunicationsLab: {
         title: 'Laboratório de Telecomunicações',
@@ -491,6 +529,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       mastersClassroom: {
         title: 'Sala Aulas Mestrado',
@@ -507,6 +546,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       mastersClassroomPlus: {
         title: 'Sala Aulas Mestrado Plus',
@@ -523,6 +563,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       neeRoom: {
         title: 'Sala NEE',
@@ -539,6 +580,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       examRoom: {
         title: 'Sala Provas',
@@ -555,6 +597,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       meetingRoom: {
         title: 'Sala Reunião',
@@ -571,6 +614,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       architectureRoom: {
         title: 'Sala de Arquitectura',
@@ -587,6 +631,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       normalClassroom: {
         title: 'Sala de Aulas normal',
@@ -603,6 +648,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       videoconference: {
         title: 'videoconferencia',
@@ -619,6 +665,7 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
       atrium: {
         title: 'Átrio',
@@ -635,21 +682,46 @@ var config = {
         headerFilterParams: {
           tristate: true,
         },
+        sorter: 'boolean',
       },
     },
   },
   defaultCriteria: [
     {
       id: 1,
-      name: 'Nome 1',
-      expression: 'Expressão 1',
-      aggregator: 'MAX',
+      name: 'Sobrelotação',
+      expression: 'Aula["Inscritos no turno"] - Aula["Lotação"] > 0',
+      aggregator: 'COUNT',
     },
     {
       id: 2,
-      name: 'Nome 2',
-      expression: 'Expressão 2',
+      name: 'Capacidade Total',
+      expression: 'Sala["Capacidade Normal"] + Sala["Capacidade Exame"]',
       aggregator: 'SUM',
+    },
+    {
+      id: 3,
+      name: 'Turno',
+      expression: 'Aula["Turno"].endsWith("TP01")',
+      aggregator: 'COUNT',
+    },
+    {
+      id: 4,
+      name: 'Expressão Regular',
+      expression: '/\\d{5}TP01/g.test(Aula["Turno"])',
+      aggregator: 'COUNT',
+    },
+    {
+      id: 5,
+      name: 'Horas',
+      expression: 'Aula["Início"].hour + " " + Aula["Início"].minute + " " + Aula["Início"].second',
+      aggregator: 'COUNT',
+    },
+    {
+      id: 6,
+      name: 'Datas',
+      expression: 'Aula["Dia"].day + " " + Aula["Dia"].month + " " + Aula["Dia"].year',
+      aggregator: 'COUNT',
     },
   ],
 };

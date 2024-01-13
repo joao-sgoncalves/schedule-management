@@ -27,7 +27,6 @@ function createCriteriaTable() {
     layoutColumnsOnNewData: true,
     placeholder: 'Sem Dados',
     resizableRows: true,
-    movableRows: true,
   };
 
   const table = new Tabulator($table[0], options);
@@ -64,7 +63,10 @@ function getCriteriaColumns() {
 
         const codeEditor = CodeMirror(cellElement, {
           value: cellValue,
-          mode: 'javascript',
+          mode: {
+            name: 'javascript',
+            globalVars: true,
+          },
           tabSize: 2,
           extraKeys: {
             "Esc": cancel,
@@ -72,6 +74,37 @@ function getCriteriaColumns() {
           },
           allowDropFileTypes: ['text/javascript'],
           autofocus: true,
+          hintOptions: {
+            hint: (editor) => {
+              const entities = {
+                'Aula': {
+                  fields: config.tableFields.classes,
+                },
+                'Sala': {
+                  fields: config.tableFields.rooms,
+                },
+              };
+
+              const completions = [];
+              const cursor = editor.getCursor();
+
+              Object.keys(entities).forEach((key) => {
+                Object.values(entities[key].fields).forEach((value) => {
+                  completions.push(`${key}["${value.title}"]`);
+                });
+              });
+
+              return {
+                list: completions,
+                from: cursor,
+                to: cursor,
+              };
+            },
+            completeSingle: false,
+            closeCharacters: /[\s(){};:>,]/,
+          },
+          autoCloseBrackets: true,
+          matchBrackets: true,
         });
 
         codeEditor.setSize('100%', '100%');
@@ -81,9 +114,26 @@ function getCriteriaColumns() {
           codeEditor.setCursor(Infinity, Infinity);
         });
 
-        codeEditor.on('blur', () => {
+        codeEditor.on('blur', (cm, event) => {
+          const relatedTarget = event.relatedTarget;
+          const codeMirror = relatedTarget?.parentElement?.CodeMirror;
+
+          const $target = $(event.target);
+          const ariaAutocomplete = $target.attr('aria-autocomplete');
+
+          console.log('cm:', cm);
+          console.log('event:', event);
+
+          if (codeMirror || (!relatedTarget && ariaAutocomplete)) {
+            return;
+          }
+
           const value = codeEditor.getValue();
           success(value);
+        });
+
+        codeEditor.on('endCompletion', (cm) => {
+          cm.focus();
         });
 
         codeEditor.on('keydown', (_instance, event) => {
@@ -429,6 +479,14 @@ $('#classes-input').change((event) => {
       </div>
     `);
 
+    const $scheduleHeatmaps = $('#schedule-heatmaps');
+    const scheduleHeatmapId = `schedule-heatmap-${tableNumber}`;
+
+    const $scheduleHeatmap = $('<div></div>')
+      .attr('id', scheduleHeatmapId);
+
+    $scheduleHeatmaps.append($scheduleHeatmap);
+
     const tooltipsSelector = `#${containerId} [data-bs-toggle="tooltip"]`;
     $(tooltipsSelector).tooltip({ trigger: 'hover' });
 
@@ -553,7 +611,9 @@ $('body').on('blur', '.table-name-input', (event) => {
 
   if (tableType === 'class') {
     const $tableContainer = $heading.closest('.table-container');
+
     updateQualityTraceName($tableContainer);
+    updateHeatmapTitle($tableContainer);
   }
 });
 
@@ -628,6 +688,7 @@ $('body').on('click', '.delete-table-btn', (event) => {
   const $tableContainer = $target.closest('.table-container');
   const containerId = $tableContainer.attr('id');
   const $tablesContainer = $tableContainer.closest('.tables-container');
+  const tableId = $tableContainer.find('.table-id').text();
 
   const containerIndex = $tableContainer.index();
   const tableType = containerId.split('-', 1)[0];
@@ -650,6 +711,7 @@ $('body').on('click', '.delete-table-btn', (event) => {
 
   if (tableType === 'classes') {
     removeQualityTrace(containerIndex);
+    deleteScheduleHeatmap(tableId);
   }
 });
 
@@ -872,6 +934,7 @@ function createTable(selector, columns, data) {
   table.on('tableBuilt', () => {
     if (tableType === 'classes') {
       updateQualityData($tableContainer);
+      createScheduleHeatmap($tableContainer);
     } else {
       updateQualityReferencedByRoom($tableContainer);
     }
@@ -910,8 +973,10 @@ function cellEdited(cell) {
   const fieldTypeParams = tableField?.typeParams;
 
   const hozAlign = tableField?.hozAlign;
-  const headerFilter = tableField?.headerFilter;
+  const headerFilter = tableField?.headerFilter ?? 'input';
   const headerFilterParams = tableField?.headerFilterParams;
+
+  const sorter = tableField?.sorter ?? 'string';
 
   if (formatter === 'datetime' && fieldType === 'DateTime') {
     formatter = datetimeFormatter;
@@ -959,6 +1024,7 @@ function cellEdited(cell) {
         hozAlign,
         headerFilter,
         headerFilterParams,
+        sorter,
       };
 
       table.updateColumnDefinition(cellField, updateDefinition)
@@ -967,6 +1033,12 @@ function cellEdited(cell) {
 
           if (tableType === 'rooms') {
             updateQualityReferencedByRoom($container);
+          } else {
+            const heatmapFields = ['dayOfTheWeek', 'start', 'end'];
+
+            if (heatmapFields.includes(cellField) || heatmapFields.includes(fieldName)) {
+              updateScheduleHeatmap($container);
+            }
           }
         });
     });
@@ -984,6 +1056,8 @@ function updateTable(selector, columns, data) {
     .then(() => {
       if (tableType === 'rooms') {
         updateQualityReferencedByRoom($tableContainer);
+      } else {
+        updateScheduleHeatmap($tableContainer);
       }
     });
 }
@@ -1006,6 +1080,7 @@ function getColumns(fields, tableFields) {
   const errorsColumn = {
     field: 'errors',
     title: 'Erros',
+    sorter: 'string',
     headerSortTristate: true,
     vertAlign: 'middle',
     formatter: 'textarea',
@@ -1051,8 +1126,10 @@ function getColumn(title, tableFields) {
   const type = tableField?.type;
   const hozAlign = tableField?.hozAlign;
   
-  const headerFilter = tableField?.headerFilter;
+  const headerFilter = tableField?.headerFilter ?? 'input';
   const headerFilterParams = tableField?.headerFilterParams;
+
+  const sorter = tableField?.sorter ?? 'string';
 
   if (formatter === 'datetime' && type === 'DateTime') {
     formatter = datetimeFormatter;
@@ -1080,6 +1157,7 @@ function getColumn(title, tableFields) {
     },
     headerFilter,
     headerFilterParams,
+    sorter,
   };
 }
 
@@ -1188,6 +1266,7 @@ function getQualityColumn(field, title, bottomCalc) {
     headerSortTristate: true,
     vertAlign: 'middle',
     headerFilter: 'input',
+    sorter: 'string',
   };
 }
 
@@ -1320,7 +1399,7 @@ function convertTo(type, typeParams, value) {
     return value;
   }
 
-  if (value === undefined) {
+  if (value === undefined || (value === '' && type !== 'String')) {
     return undefined;
   }
 
@@ -1345,10 +1424,6 @@ function convertTo(type, typeParams, value) {
       newValue = luxon.DateTime.fromFormat(value, typeParams.format);
       break;
     case 'Boolean':
-      if (!value) {
-        return undefined;
-      }  
-
       const trueValue = typeParams?.trueValue;
       newValue = trueValue ? value === trueValue : Boolean(value);
 
@@ -1431,4 +1506,3 @@ function columnFormatter(cell, formatterParams, formatter) {
 
 // TODO: Fix filter for Start, End and Day columns
 // TODO: Fix selection causes blur of editor
-// TODO: Plot heatmap

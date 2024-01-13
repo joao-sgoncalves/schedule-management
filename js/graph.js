@@ -1,6 +1,8 @@
+const scheduleWeekDays = getWeekDays();
+const scheduleTimes = getTimes();
+
 $(document).ready(() => {
   createQualityChart();
-  // createScheduleHeatmap();
 });
 
 function createQualityChart() {
@@ -73,28 +75,197 @@ function removeQualityTrace(traceIndex) {
   Plotly.deleteTraces('quality-chart', traceIndex);
 }
 
-function createScheduleHeatmap() {
+function createScheduleHeatmap($tableContainer) {
+  const tableId = $tableContainer.find('.table-id').text();
+  const heatmapId = `schedule-heatmap-${tableId}`;
+
+  const tableContainerId = $tableContainer.attr('id');
+  const tableFullName = $tableContainer.find('.table-full-name').text();
+
+  const { scheduleData, min, max } = getScheduleData(tableContainerId);
+
   const data = [
     {
-      name: 'Horário 1',
-      x: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-      y: ['08:00 - 10:00', '10:00 - 12:00', '12:00 - 14:00', '14:00 - 16:00', '16:00 - 18:00', '18:00 - 20:00'],
-      z: [[1, 2, 3, 4, 5], [2, 3, 4, 5, 1], [3, 4, 1, 2, 1], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2], [3, 3, 3, 3, 3]],
+      x: scheduleWeekDays,
+      y: scheduleTimes,
+      z: scheduleData,
       type: 'heatmap',
+      colorscale: 'Hot',
+      xgap: 2,
+      ygap: 2,
     },
   ];
 
+  const annotations = getScheduleAnnotations(scheduleData, min, max);
+
   const layout = {
-    title: 'Distribuição de aulas por salas',
+    title: `Distribuição de aulas por salas (${tableFullName})`,
+    annotations,
     xaxis: {
-      title: 'Critério',
+      title: {
+        text: 'Dias da semana',
+        standoff: 30,
+      },
+      tickmode: 'linear',
+      showgrid: false,
+      ticks: '',
     },
     yaxis: {
-      title: 'Valor',
+      title: {
+        text: 'Horas',
+        standoff: 20,
+      },
+      tickmode: 'linear',
+      showgrid: false,
+      ticks: '',
     },
+    margin: {
+      pad: 10,
+    },
+    height: 1000,
   };
 
   const config = { responsive: true };
 
-  Plotly.newPlot('schedule-heatmap', data, layout, config);
+  Plotly.newPlot(heatmapId, data, layout, config);
+}
+
+function getScheduleData(tableContainerId) {
+  const table = tables[tableContainerId];
+  const tableData = table.getData();
+  const scheduleData = [];
+
+  let min = Infinity;
+  let max = 0;
+
+  scheduleTimes.forEach((time) => {
+    const timeData = [];
+
+    scheduleWeekDays.forEach((day) => {
+      const classesOnTime = tableData.filter((row) => {
+        if (row.id === 0) {
+          return false;
+        }
+
+        if (!row.dayOfTheWeek || !row.start || !row.end) {
+          return false;
+        }
+
+        const startTime = row.start.toFormat('HH:mm');
+        const endTime = row.end.toFormat('HH:mm');
+
+        return day.startsWith(row.dayOfTheWeek) && time >= startTime && time < endTime;
+      }).length;
+
+      if (classesOnTime < min) {
+        min = classesOnTime;
+      }
+
+      if (classesOnTime > max) {
+        max = classesOnTime;
+      }
+
+      timeData.push(classesOnTime);
+    });
+
+    scheduleData.push(timeData);
+  });
+
+  return { scheduleData, min, max };
+}
+
+function updateHeatmapTitle($tableContainer) {
+  const tableId = $tableContainer.find('.table-id').text();
+  const heatmapId = `schedule-heatmap-${tableId}`;
+  const tableFullName = $tableContainer.find('.table-full-name').text();
+
+  const update = {
+    title: `Distribuição de aulas por salas (${tableFullName})`,
+  };
+
+  Plotly.relayout(heatmapId, update);
+}
+
+function updateScheduleHeatmap($tableContainer) {
+  const tableId = $tableContainer.find('.table-id').text();
+  const heatmapId = `schedule-heatmap-${tableId}`;
+  const tableContainerId = $tableContainer.attr('id');
+
+  const { scheduleData, min, max } = getScheduleData(tableContainerId);
+
+  const data_update = {
+    z: [scheduleData],
+  };
+
+  const annotations = getScheduleAnnotations(scheduleData, min, max);
+
+  const layout_update = {
+    annotations,
+  };
+
+  Plotly.update(heatmapId, data_update, layout_update);
+}
+
+function deleteScheduleHeatmap(tableId) {
+  const heatmapId = `schedule-heatmap-${tableId}`;
+  const $heatmap = $(`#${heatmapId}`);
+
+  Plotly.purge(heatmapId);
+  $heatmap.remove();
+}
+
+function getWeekDays() {
+  return ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo'];
+}
+
+function getTimes() {
+  const startHour = 8;
+  const endHour = 23;
+  const times = [];
+
+  for (let i = startHour; i <= endHour; i++) {
+    const hourStr = i.toString().padStart(2, '0');
+
+    times.push(`${hourStr}:00`);
+
+    if (i < endHour) {
+      times.push(`${hourStr}:30`);
+    }
+  }
+
+  times.reverse();
+  return times;
+}
+
+function getScheduleAnnotations(scheduleData, min, max) {
+  const midpoint = (max + min) / 2;
+  const annotations = [];
+
+  for (var i = 0; i < scheduleTimes.length; i++) {
+    for (var j = 0; j < scheduleWeekDays.length; j++) {
+      var currentValue = scheduleData[i][j];
+      const textColor = currentValue <= midpoint ? 'white' : 'black';
+
+      var result = {
+        xref: 'x1',
+        yref: 'y1',
+        x: scheduleWeekDays[j],
+        y: scheduleTimes[i],
+        text: scheduleData[i][j],
+        font: {
+          family: 'Arial',
+          size: 12,
+          color: 'rgb(50, 171, 96)'
+        },
+        showarrow: false,
+        font: {
+          color: textColor,
+        },
+      };
+
+      annotations.push(result);
+    }
+  }
+
+  return annotations;
 }
