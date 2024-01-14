@@ -40,43 +40,6 @@ function formatter(cell) {
   return value;
 }
 
-function resolveQualityExpression(
-  value,
-  expression,
-  classesContainerId,
-  roomsContainerId,
-  classData,
-  roomsData
-) {
-  if (classData.id === 0 || !expression) {
-    return value;
-  }
-
-  const { newExpression, errors, roomData } = replaceExpression(
-    expression,
-    roomsContainerId,
-    classesContainerId,
-    classData,
-    roomsData
-  );
-
-  if (errors.length > 0) {
-    console.error(errors.join("\n"));
-    return value;
-  }
-
-  let newValue;
-
-  try {
-    newValue = eval(newExpression);
-  } catch (err) {
-    newValue = value;
-    console.error(err);
-  }
-
-  return newValue;
-}
-
 $("#upload-classes-btn").click(() => {
   const $classesInput = $("#classes-input");
   $classesInput[0].click();
@@ -97,44 +60,16 @@ $("#classes-input").change((event) => {
 
     const containerId = `classes-container-${tableNumber}`;
     const tableId = `classes-table-${tableNumber}`;
-    const roomsSelectId = `rooms-select-${tableNumber}`;
 
     const filename = file.name;
     const filenameWithoutExt =
       filename.substring(0, filename.lastIndexOf(".")) || filename;
-
-    const roomTableInfos = getTableInfos("#room-tables");
-
-    const $roomsSelect = $("<select></select>")
-      .attr("id", roomsSelectId)
-      .addClass("table-names-select form-select w-auto")
-      .attr("aria-label", "Selecionar tabela de salas");
-
-    const $defaultOption = $("<option></option>")
-      .attr("value", "-1")
-      .text("-- Escolha uma opção --");
-
-    $roomsSelect.append($defaultOption);
-
-    roomTableInfos.forEach((info) => {
-      const $nameOption = $("<option></option>")
-        .attr("value", info.id)
-        .text(info.fullName);
-
-      $roomsSelect.append($nameOption);
-    });
-
-    const roomsSelectHtml = $roomsSelect.prop("outerHTML");
 
     $("#class-tables").append(`
       <div id="${containerId}" class="table-container d-inline-block mw-100 mt-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <div class="table-full-name d-flex align-items-center"><h5 class="table-id mb-0">${tableNumber}</h5><h5 class="mb-0 mx-1"> - </h5><h5 class="table-name-heading table-name mb-0">${filenameWithoutExt}</h5></div>
           <div class="d-flex">
-            <div class="d-flex align-items-center me-3">
-              <label class="form-label mb-0 me-2" for="${roomsSelectId}">Tabela de salas:</label>
-              ${roomsSelectHtml}
-            </div>
             <button
               class="upload-table-btn btn btn-outline-primary me-2"
               type="button"
@@ -177,6 +112,8 @@ $("#classes-input").change((event) => {
     $(tooltipsSelector).tooltip({ trigger: "hover" });
 
     parse(file, `#${tableId}`);
+
+    $("#upload-classes-btn").hide();
   });
 
   $(event.target).val(null);
@@ -254,6 +191,8 @@ $("#rooms-input").change((event) => {
     $(tooltipsSelector).tooltip({ trigger: "hover" });
 
     parse(file, `#${tableId}`);
+
+    $("#upload-rooms-btn").hide();
   });
 
   const roomsContainerId = $roomTables.attr("id");
@@ -361,6 +300,8 @@ $("body").on("click", ".delete-table-btn", (event) => {
 
   const containerIndex = $tableContainer.index();
   const tableType = containerId.split("-", 1)[0];
+
+  $(`#upload-${tableType}-btn`).show();
 
   const $tooltips = $tableContainer.find('[data-bs-toggle="tooltip"]');
   $tooltips.tooltip("dispose");

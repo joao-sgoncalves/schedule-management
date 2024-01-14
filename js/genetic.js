@@ -1,6 +1,8 @@
 const worker = new Worker("js/genetic-worker.js");
 
 $(".start-btn").on("click", () => {
+  clear_results();
+
   const criteria = {
     overlapping: $("#overlapping").is(":checked"),
     overcrowded: $("#overcrowded").is(":checked"),
@@ -101,3 +103,10 @@ worker.onmessage = (msg) => {
     title: "Características Pedidas",
   });
 };
+
+function clear_results() {
+  $("#result-tables").html("");
+  Plotly.purge("overlapping-chart");
+  Plotly.purge("overcrowded-chart");
+  Plotly.purge("characteristics-chart");
+}
