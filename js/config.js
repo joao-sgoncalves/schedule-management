@@ -61,9 +61,6 @@ var config = {
         },
         hozAlign: 'center',
         headerFilter: 'time',
-        headerFilterParams: {
-          format: true,
-        },
         sorter: 'time',
       },
       end: {
@@ -78,9 +75,6 @@ var config = {
         },
         hozAlign: 'center',
         headerFilter: 'time',
-        headerFilterParams: {
-          format: true,
-        },
         sorter: 'time',
       },
       day: {
@@ -95,9 +89,6 @@ var config = {
         },
         hozAlign: 'center',
         headerFilter: 'date',
-        headerFilterParams: {
-          format: true,
-        },
         sorter: 'date',
       },
       requestedRoomCharacteristics: {

@@ -99,7 +99,7 @@ function createScheduleHeatmap($tableContainer) {
   const annotations = getScheduleAnnotations(scheduleData, min, max);
 
   const layout = {
-    title: `Distribuição de aulas por salas (${tableFullName})`,
+    title: `Distribuição de aulas (${tableFullName})`,
     annotations,
     xaxis: {
       title: {
@@ -180,7 +180,7 @@ function updateHeatmapTitle($tableContainer) {
   const tableFullName = $tableContainer.find('.table-full-name').text();
 
   const update = {
-    title: `Distribuição de aulas por salas (${tableFullName})`,
+    title: `Distribuição de aulas (${tableFullName})`,
   };
 
   Plotly.relayout(heatmapId, update);

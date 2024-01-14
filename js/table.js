@@ -114,26 +114,32 @@ function getCriteriaColumns() {
           codeEditor.setCursor(Infinity, Infinity);
         });
 
+        function successFunc(cm) {
+          const value = cm.getValue();
+          success(value);
+        }
+
+        let successTimer;
+
         codeEditor.on('blur', (cm, event) => {
+          clearTimeout(successTimer);
+
           const relatedTarget = event.relatedTarget;
           const codeMirror = relatedTarget?.parentElement?.CodeMirror;
 
-          const $target = $(event.target);
-          const ariaAutocomplete = $target.attr('aria-autocomplete');
-
-          console.log('cm:', cm);
-          console.log('event:', event);
-
-          if (codeMirror || (!relatedTarget && ariaAutocomplete)) {
+          if (codeMirror) {
             return;
           }
 
-          const value = codeEditor.getValue();
-          success(value);
+          if (!relatedTarget) {
+            successTimer = setTimeout(() => successFunc(cm), 100);
+          } else {
+            successFunc(cm);
+          }
         });
 
-        codeEditor.on('endCompletion', (cm) => {
-          cm.focus();
+        codeEditor.on('focus', () => {
+          clearTimeout(successTimer);
         });
 
         codeEditor.on('keydown', (_instance, event) => {
@@ -973,8 +979,21 @@ function cellEdited(cell) {
   const fieldTypeParams = tableField?.typeParams;
 
   const hozAlign = tableField?.hozAlign;
-  const headerFilter = tableField?.headerFilter ?? 'input';
+  
+  let headerFilter = tableField?.headerFilter ?? 'input';
   const headerFilterParams = tableField?.headerFilterParams;
+  let headerFilterFunc;
+  let headerFilterPlaceholder;
+
+  if (headerFilter === 'time') {
+    headerFilter = 'input';
+    headerFilterFunc = timeHeaderFilter;
+    headerFilterPlaceholder = 'HH:mm:ss';
+  } else if (headerFilter === 'date') {
+    headerFilter = 'input';
+    headerFilterFunc = dateHeaderFilter;
+    headerFilterPlaceholder = 'dd/MM/yyyy'
+  }
 
   const sorter = tableField?.sorter ?? 'string';
 
@@ -1024,6 +1043,8 @@ function cellEdited(cell) {
         hozAlign,
         headerFilter,
         headerFilterParams,
+        headerFilterFunc,
+        headerFilterPlaceholder,
         sorter,
       };
 
@@ -1126,8 +1147,20 @@ function getColumn(title, tableFields) {
   const type = tableField?.type;
   const hozAlign = tableField?.hozAlign;
   
-  const headerFilter = tableField?.headerFilter ?? 'input';
+  let headerFilter = tableField?.headerFilter ?? 'input';
   const headerFilterParams = tableField?.headerFilterParams;
+  let headerFilterFunc;
+  let headerFilterPlaceholder;
+
+  if (headerFilter === 'time') {
+    headerFilter = 'input';
+    headerFilterFunc = timeHeaderFilter;
+    headerFilterPlaceholder = 'HH:mm:ss';
+  } else if (headerFilter === 'date') {
+    headerFilter = 'input';
+    headerFilterFunc = dateHeaderFilter;
+    headerFilterPlaceholder = 'dd/MM/yyyy'
+  }
 
   const sorter = tableField?.sorter ?? 'string';
 
@@ -1157,6 +1190,8 @@ function getColumn(title, tableFields) {
     },
     headerFilter,
     headerFilterParams,
+    headerFilterFunc,
+    headerFilterPlaceholder,
     sorter,
   };
 }
@@ -1387,7 +1422,11 @@ function replaceExpression(expression, roomsContainerId, classData, roomsData, c
     }
   }
 
-  return { newExpression, errors, roomData };
+  const uniqueErrors = errors.filter((value, index, array) => {
+    return array.indexOf(value) === index;
+  });
+
+  return { newExpression, errors: uniqueErrors, roomData };
 }
 
 function getFilledFields(fieldsData) {
@@ -1504,5 +1543,52 @@ function columnFormatter(cell, formatterParams, formatter) {
   return formatterFunc(cell, formatterParams);
 }
 
-// TODO: Fix filter for Start, End and Day columns
-// TODO: Fix selection causes blur of editor
+function timeHeaderFilter(headerValue, rowValue, rowData) {
+  if (rowData.id === 0) {
+    return true;
+  }
+
+  if (!rowValue) {
+    return false;
+  }
+
+  const headerParts = headerValue.split(':').length;
+  let timeFormat;
+
+  if (headerParts === 1) {
+    timeFormat = 'HH';
+  } else if (headerParts === 2) {
+    timeFormat = 'HH:mm';
+  } else {
+    timeFormat = 'HH:mm:ss';
+  }
+
+  const valueTime = rowValue.toFormat(timeFormat);
+
+  return valueTime === headerValue;
+}
+
+function dateHeaderFilter(headerValue, rowValue, rowData) {
+  if (rowData.id === 0) {
+    return true;
+  }
+
+  if (!rowValue) {
+    return false;
+  }
+
+  const headerParts = headerValue.split('/').length;
+  let dateFormat;
+
+  if (headerParts === 1) {
+    dateFormat = 'dd';
+  } else if (headerParts === 2) {
+    dateFormat = 'dd/MM';
+  } else {
+    dateFormat = 'dd/MM/yyyy';
+  }
+
+  const valueDate = rowValue.toFormat(dateFormat);
+
+  return valueDate === headerValue;
+}
